@@ -1,94 +1,3 @@
-// default retry count = 0 causes flickering on ESP8266
-#define FASTLED_INTERRUPT_RETRY_COUNT 0
-#include <FastLED.h>
-// user_interface for system_update_cpu_freq
-//extern "C" {
-//#include "user_interface.h"
-//}
-
-#define DEBUG true                // serial output diagnostics
-#define DETECT_MILLIS 1000        // rate which turn animations will need to ignore sudden drops due to external relays (delays brake/turn signal response rate)
-#define PIN_BRAKE 0               // the pin the brake light is attached to
-#define PIN_TURN_LEFT 4           // the pin the left turn signal is attached to
-#define PIN_TURN_RIGHT 5          // the pin the right turn signal is attached to
-#define PIN_LEDS 2                // the pin that the LED strips are attached to
-#define COLOR_ORDER GRB           // LED color order of the strip
-#define CHIPSET WS2812B           // LED strip chipset
-#define BRIGHTNESS 192            // initial global brightness of LEDs
-#define BPM 50                    // beats/minute rate in which LED animations will execute
-#define COLS 19                   // the number of columns in the LED matrix
-#define ROWS 3                    // the number of rows in the LED matrix
-#define COL_CENTER_INDEX 9        // the index where the center LEDs are physically present between the two sections of the left/right turn signals
-#define FPS_FIRE 15               // frames/second for the fire animation
-#define DNS_PORT 53               // the port used for DNS
-#define MATRIX_SERPENTINE true    // LED matrix layouts: true = odd rows left -> right, even rows left -> right (false = all rows left -> right)
-
-#define FPS_FIRE_MILLIS round(1000 / FPS_FIRE)
-#define FPS (BPM * 1)
-#define FPS_ANIM_MILLIS round(1000 / FPS)
-#define NUM_LEDS (COLS * ROWS)
-#define NUM_CENTER_COLS 1
-#define NUM_RIGHT_COLS (COLS - COL_CENTER_INDEX - NUM_CENTER_COLS)
-#define NUM_LEFT_COLS (COLS - NUM_RIGHT_COLS - NUM_CENTER_COLS)
-#define MAX_DIMENSIONS ((COLS > ROWS) ? COLS : ROWS)
-#define SSID_FILE "/ssid.txt"
-#define ANIM_NOISE 1 << 1
-#define ANIM_FIRE 1 << 2
-#define ANIM_RAIN 1 << 3
-#define ANIM_JUGGLE 1 << 4
-#define ANIM_CONFETTI 1 << 5
-#define ANIM_GLITTER 1 << 6
-#define TURN_RISING 1 << 0
-#define TURN_STAY_LIT_BACKWARDS 1 << 1
-#define TURN_CYLON 1 << 2
-#define RUN_ON 1 << 0
-#define RUN_OFF 1 << 1
-#define BRAKE_ON 1 << 2
-#define BRAKE_OFF 1 << 3
-#define LEFT_ON 1 << 4
-#define LEFT_OFF 1 << 5
-#define RIGHT_ON 1 << 6
-#define RIGHT_OFF 1 << 7
-volatile byte flags = 0;                                  // flags for tracking LED states (separate ON/OFF flags for each state should exist to account for spurts of false-positive irregularities)
-unsigned long brakeOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay braking input
-unsigned long leftOffMillisPrev = 0;                      // used to avoid false-positives from possible fluctuations from external 12v relay left turn signal input
-unsigned long rightOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay right turn signal input
-uint8_t run_anim_flags = ANIM_NOISE;                      // animations that will be applied for running lamps ::WEB_CONFIGURABLE::
-uint8_t run_speed = 8;                                    // animation speed for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
-uint8_t run_scale = 100;                                  // animation scale for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
-bool run_color_cycle = false;                             // animation on/off switch color cycle for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
-uint8_t brake_color_index = 0;                            // palette color index for the brake light (rotates through palette)
-uint8_t turn_bpm = BPM;                                   // beats/minute for turn signals ::WEB_CONFIGURABLE::
-uint8_t turn_fade = 0;                                    // rate at which the turn signals fade to black: 8 bit, 1 = slow, 255 = fast, 0 = immediate ::WEB_CONFIGURABLE::
-uint8_t turn_left_color_index = 0;                        // palette color index for the left turn signal (rotates through palette)
-uint8_t turn_right_color_index = 0;                       // palette color index for the left turn signal (rotates through palette)
-uint8_t noise_matrix[MAX_DIMENSIONS][MAX_DIMENSIONS];     // for tracking noise level dimensions
-struct Pulse {
-  uint8_t delta; uint16_t xy; uint16_t beat; uint16_t upper; uint16_t lower;
-};
-Pulse turn_left = { TURN_CYLON, 0, 0, 0, 0 };             // left turn signal animation state tracking
-Pulse turn_right = { TURN_CYLON, 0, 0, 0, 0 };            // right turn signal animation state tracking
-CRGB leds_plus_safety_pixel[NUM_LEDS + 1];
-CRGB* const leds(leds_plus_safety_pixel + 1);
-extern const TProgmemPalette16 RunPalette_p FL_PROGMEM = { // running lamp static color palette which is stored in PROGMEM (flash), which is almost always more plentiful than RAM (64 bytes of flash) ::WEB_CONFIGURABLE::
-  0x000000, 0x800000, 0x000000, 0x800000,
-  0x8B0000, 0x800000, 0x8B0000, 0x8B0000,
-  0x8B0000, 0xFF0000, 0xFFA500, 0xFFFF33,
-  0xFFA500, 0xFF0000, 0x8B0000, 0xBF360C
-};
-extern const TProgmemPalette16 TurnPalette_p FL_PROGMEM = { // turn signal static color palette which is stored in PROGMEM (flash), which is almost always more plentiful than RAM (64 bytes of flash) ::WEB_CONFIGURABLE::
-  0xFFFF00, 0xFF6D00, 0x76FF03, 0xFF3D00,
-  0xFFFF00, 0xFF6D00, 0x76FF03, 0xFF3D00,
-  0xFFFF00, 0xFF6D00, 0x76FF03, 0xFF3D00,
-  0xFFFF00, 0xFF6D00, 0x76FF03, 0xFF3D00
-};
-
-// ----------------- Program ------------------------ 
-
-void loop() {
-  ledify();
-}
-
 // ----------------- FASTLED ------------------------ 
 
 // This function will return the right 'led index number' for a given set of X and Y coordinates on your matrix
@@ -143,35 +52,6 @@ void mapToSide(uint16_t& xy, const bool left, const bool right, const bool clear
       //Serial.printf("%u) %u (xy PRE-ADJUST) %u (xy) %u (lower) %u (upper)\n", y, xy, map(xy, xycl, xycu, xyl, xyu), xyl, xyu);
       xy = map(xy, xycl, xycu, xyl, xyu); // map to submatrix range
       break;
-    }
-  }
-}
-// random fire-like movement, hot (0...255) increase for brightness, cooling (0...255) increase for smaller fire
-void fire(uint8_t hot = 120, uint8_t cooling = 120) {
-  static uint16_t spark[COLS]; // base heat
-  CRGB stack[COLS][ROWS]; // stacks that are cooler
-  uint16_t hotMax = hot * ROWS;
-  uint16_t hot2x = hot * 2;
-  uint16_t hotHalf = hot >> 1;
-  for (int i = 0; i < COLS; i++) {
-    if (spark[i] < hot) spark[i] = random16(hot2x, hotMax); // re-heat spark
-    spark[i] = qsub8(spark[i], random8(0, cooling)); // cool the spark
-  }
-  for (int i = 0; i < COLS; i++) { // stack it up... this works on the idea that pixels are "cooler" as they get further from the spark at the bottom
-    unsigned int heat = constrain(spark[i], hot / 2, hotMax);
-    for (int j = ROWS - 1; j >= 0; j--) {
-      byte index = constrain(heat, 0, hot); // calculate the color on the palette from how hot this pixel is
-      stack[i][j] = ColorFromPalette(HeatColors_p, index);
-      unsigned int drop = random8(0, hot); // calculate the drop since the next higher pixel will be cooler
-      if (drop > heat) heat = 0; // avoid wrap-arounds from going negative
-      else heat -= drop;
-      heat = constrain(heat, 0, hotMax);
-    }
-  }
-  // 4. map stacks to led array
-  for (int i = 0; i < COLS; i++) {
-    for (int j = 0; j < ROWS; j++) {
-      leds[(j * COLS) + i] = stack[i][j];
     }
   }
 }
@@ -247,6 +127,53 @@ void glitter(const bool left, const bool right, const uint8_t confettiBPM = 0, c
 void sinelon(uint8_t hue) {
   leds[beatsin16(13, 0, NUM_LEDS - 1)] += CHSV(hue, 255, 192);
 }
+// random fire-like movement, hot (0...255) increase for brightness, cooling (0...255) increase for smaller fire
+void fire(const CRGBPalette16& palette, const bool left, const bool right, uint8_t hot = 120, uint8_t cooling = 120) {
+  if (!left && !right) return;
+  uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS;
+  static uint16_t spark[COLS]; // base heat
+  CRGB stack[width][ROWS]; // stacks that are cooler
+  uint16_t hotMax = hot * ROWS;
+  uint16_t hot2x = hot * 2;
+  uint16_t hotHalf = hot >> 1;
+  for (int x = xstart; x < width; x++) {
+    if (spark[x] < hot) spark[x] = random16(hot2x, hotMax); // re-heat spark
+    spark[x] = qsub8(spark[x], random8(0, cooling)); // cool the spark
+  }
+  for (int x = xstart; x < width; x++) { // stack it up... this works on the idea that pixels are "cooler" as they get further from the spark at the bottom
+    unsigned int heat = constrain(spark[x], hot / 2, hotMax);
+    for (int y = ROWS - 1; y >= 0; y--) {
+      byte index = constrain(heat, 0, hot); // calculate the color on the palette from how hot this pixel is
+      stack[x][y] = ColorFromPalette(palette, index);
+      unsigned int drop = random8(0, hot); // calculate the drop since the next higher pixel will be cooler
+      if (drop > heat) heat = 0; // avoid wrap-arounds from going negative
+      else heat -= drop;
+      heat = constrain(heat, 0, hotMax);
+    }
+  }
+  // 4. map stacks to led array
+  for (int x = xstart; x < width; x++) {
+    for (int y = 0; y < ROWS; y++) {
+      leds[(y * width) + x] = stack[x][y];
+    }
+  }
+}
+// random fire-like movement, hot (0...255) increase for brightness, cooling (0...255) increase for smaller fire
+void rain(const CRGBPalette16& palette, const bool left, const bool right, uint8_t hot = 120, uint8_t cooling = 120, const bool serpentine = MATRIX_SERPENTINE) {
+  if (!left && !right) return;
+  static int16_t droplet[MAX_DIMENSIONS] = {-1};
+  uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS, halfWidth = width >> 1;
+  //uint16_t y = random16(0, ROWS);
+  for (uint16_t x = xstart, xy = 0; x < halfWidth; x++) {
+    if (droplet[x] + 1 >= ROWS) {
+      droplet[x] = -1;
+      continue;//xy = XY(random8(width), 0, width, serpentine);
+    } else {
+      xy = XY(random8(width), ++droplet[x], width, serpentine);
+    }
+    leds[xy] = palette[random8(15)];
+  }
+}
 // 4 (1/2 display) or 8 (full display) colored pixels weaving in and out of sync with each other
 void juggle(const CRGBPalette16& palette, const bool left, const bool right, uint8_t speedOffset = 0, const bool serpentine = MATRIX_SERPENTINE) {
   if (!left && !right) return;
@@ -297,75 +224,86 @@ void noise8(const CRGBPalette16& palette, const bool left, const bool right, con
 }
 // debounce flag check for off condition (prevents in sudden fluctuations when turning flags off)
 void flagged(byte onFlag, byte offFlag, unsigned long *msp) {
-  if (flags & offFlag) { // off flagged
+  if (led_flags & offFlag) { // off flagged
     if (millis() - *msp > DETECT_MILLIS) {
-      if (DEBUG) Serial.printf("%s turn signal off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left" : "Right", millis() - *msp);
+      //Serial.printf("%s turn signal off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left" : "Right", millis() - *msp);
       *msp = millis();
-      flags &= ~onFlag; // remove on flag
+      led_flags &= ~onFlag; // remove on flag
     }
   }
 }
 void brakeOn() {
-  if (DEBUG) Serial.println("Brakes ON received");
-  flags |= BRAKE_ON; // add
-  flags &= ~BRAKE_OFF; // remove
+  //Serial.println("Brakes ON received");
+  led_flags |= BRAKE_ON; // add
+  led_flags &= ~BRAKE_OFF; // remove
 }
 void brakeOff() {
-  if (DEBUG) Serial.println("Brakes OFF received");
-  flags |= BRAKE_OFF; // add
-  flags &= ~BRAKE_ON; // remove
+  //Serial.println("Brakes OFF received");
+  led_flags |= BRAKE_OFF; // add
+  led_flags &= ~BRAKE_ON; // remove
 }
 void turnLeftOn() {
-  if (DEBUG) Serial.println("Left turn signal ON received");
-  flags |= LEFT_ON; // add
+  //Serial.println("Left turn signal ON received");
+  led_flags |= LEFT_ON; // add
 }
 void turnLeftOff() {
-  if (DEBUG) Serial.println("Left turn signal OFF received");
-  flags |= LEFT_OFF; // add
+  //Serial.println("Left turn signal OFF received");
+  led_flags |= LEFT_OFF; // add
 }
 void turnRightOn() {
-  if (DEBUG) Serial.println("Right turn signal ON received");
-  flags |= RIGHT_ON; // add
+  //Serial.println("Right turn signal ON received");
+  led_flags |= RIGHT_ON; // add
 }
 void turnRightOff() {
-  if (DEBUG) Serial.println("Right turn signal OFF received");
-  flags |= RIGHT_OFF; // add
+  //Serial.println("Right turn signal OFF received");
+  led_flags |= RIGHT_OFF; // add
 }
 
-void ledify() {
+// when errors occurred during setup the error loop should be called instead of the ledLoop 
+void ledErrorLoop() {
+  EVERY_N_MILLISECONDS(1000) {
+    
+  }
+}
+
+// should be called in the main loop
+void ledLoop() {
   flagged(BRAKE_ON, BRAKE_OFF, &brakeOffMillisPrev); // check if brake is on usng time threshold
   flagged(LEFT_ON, LEFT_OFF, &leftOffMillisPrev); // check if left turn signal is on usng time threshold
   flagged(RIGHT_ON, LEFT_OFF, &rightOffMillisPrev); // check if right turn signal is on usng time threshold
   EVERY_N_MILLISECONDS(FPS_ANIM_MILLIS) {
     //memcpy8(buffer, leds, sizeof(leds)); // copy values from buffer to LEDs
     //memset8(leds, 0, NUM_LEDS * sizeof(CRGB)); // clear the LED pixel buffer
-    if (flags & BRAKE_ON) {
+    if (led_flags & BRAKE_ON) {
       // brake animation on
-    } else if (!(flags & LEFT_ON && flags & RIGHT_ON)) { // ensure that the warning lights are not on (i.e. simultaneous left/right turn signals)
+    } else if (!(led_flags & LEFT_ON && led_flags & RIGHT_ON)) { // ensure that the warning lights are not on (i.e. simultaneous left/right turn signals)
       // blackout the pixels where the running lamp animation will be displayed
-      if (!(flags & LEFT_ON) && !(flags & RIGHT_ON)) fadeToBlackBy(leds, NUM_LEDS, 255); // 8 bit, 1 = slow, 255 = fast
-      else if (flags & LEFT_ON) blackout(NUM_LEFT_COLS + NUM_CENTER_COLS, COLS, 0, ROWS, 255); // blackout right side of the display only
+      if (!(led_flags & LEFT_ON) && !(led_flags & RIGHT_ON)) fadeToBlackBy(leds, NUM_LEDS, 255); // 8 bit, 1 = slow, 255 = fast
+      else if (led_flags & LEFT_ON) blackout(NUM_LEFT_COLS + NUM_CENTER_COLS, COLS, 0, ROWS, 255); // blackout right side of the display only
       else blackout(0, NUM_LEFT_COLS, 0, ROWS, 255); // blackout left side of the display only
       // run selected running lamp animation(s)
-      if (run_anim_flags & ANIM_NOISE) noise8(RunPalette_p, !(flags & LEFT_ON), !(flags & RIGHT_ON), run_color_cycle, run_speed, run_scale);
-      if (run_anim_flags & ANIM_JUGGLE) juggle(RunPalette_p, !(flags & LEFT_ON), !(flags & RIGHT_ON));
-      if (run_anim_flags & ANIM_CONFETTI) glitter(!(flags & LEFT_ON), !(flags & RIGHT_ON), true);
-      if (run_anim_flags & ANIM_GLITTER) glitter(!(flags & LEFT_ON), !(flags & RIGHT_ON));
+      if (run_anim_flags & ANIM_NOISE) noise8(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), run_color_cycle, run_speed, run_scale);
+      if (run_anim_flags & ANIM_FIRE) fire(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if (run_anim_flags & ANIM_RAIN) rain(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if (run_anim_flags & ANIM_JUGGLE) juggle(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if (run_anim_flags & ANIM_CONFETTI) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), true);
+      if (run_anim_flags & ANIM_GLITTER) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
       /*EVERY_N_MILLISECONDS(FPS_FIRE_MILLIS) {
         fire();
         FastLED.show();
       }*/
     }
-    //if (DEBUG) Serial.printf("Left turn signal is %s, Right turn signal is %s\n", flags & LEFT_ON ? "ON" : flags & LEFT_OFF ? "OFF" : "N/A", flags & RIGHT_ON ? "ON" : flags & RIGHT_OFF ? "OFF" : "N/A");
-    if (flags & LEFT_ON || flags & RIGHT_ON) turnSignal(TurnPalette_p, flags & LEFT_ON, flags & RIGHT_ON);
+    //Serial.printf("Left turn signal is %s, Right turn signal is %s\n", led_flags & LEFT_ON ? "ON" : led_flags & LEFT_OFF ? "OFF" : "N/A", led_flags & RIGHT_ON ? "ON" : led_flags & RIGHT_OFF ? "OFF" : "N/A");
+    if (led_flags & LEFT_ON || led_flags & RIGHT_ON) turnSignal(TurnPalette_p, led_flags & LEFT_ON, led_flags & RIGHT_ON);
     blackout(COL_CENTER_INDEX, COL_CENTER_INDEX + 1, 0, ROWS, 0); // center channel should not be lit
     FastLED.show();
   }
-  //if (DEBUG) Serial.println(LEDS.getFPS());
+  //Serial.println(LEDS.getFPS());
 }
 
+// should be called in the main setup
 void ledSetup() {
-  flags |= RUN_ON; // add
+  led_flags |= RUN_ON; // add
   pinMode(PIN_BRAKE, INPUT_PULLUP);
   pinMode(PIN_TURN_LEFT, INPUT_PULLUP);
   pinMode(PIN_TURN_RIGHT, INPUT_PULLUP);
@@ -378,24 +316,6 @@ void ledSetup() {
 
   FastLED.addLeds<CHIPSET, PIN_LEDS, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);//.setDither(max_bright < 255);
   FastLED.setBrightness(BRIGHTNESS);
-
-  if (DEBUG) Serial.println("LED setup complete");
-}
-
-// ----------------- General Setup ------------------------ 
-
-void setup() {
-  //system_update_cpu_freq(160); // 80 MHz or 160 MHz, default is 80 MHz
-  if (DEBUG) {
-    Serial.begin(115200);
-    Serial.println("Starting...");
-  }
-  pinMode(LED_BUILTIN, OUTPUT); // on-board LED
-  //delay(1000); // ESP8266 init delay
-
-  ledSetup();
-
-  // demo
-  //turnLeftOn();
-  //turnRightOn();
+  FastLED.clear();
+  FastLED.show();
 }

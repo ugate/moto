@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="description" content="Motomoon WiFi LED control">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Motomoon">
+  <link rel="apple-touch-icon-precomposed" href="/favicon.png">
+  <meta name="msapplication-TileImage" content="/favicon.png">
+  <meta name="msapplication-TileColor" content="#3372DF">
+  <link rel="shortcut icon" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
+  <title>MotoMoon</title>
+  <style>
+    html, body {font-family:'Roboto', sans-serif;font-size:14px;font-weight:400;line-height:20px;}
+    html {width:100%;height:100%;color:rgba(0,0,0,.87);-ms-touch-action:manipulation;touch-action:manipulation;}
+    body {margin:0;width:100%;min-height:100%;background-color:#f5f5f5 !important;}
+    ::selection {background:#b3d4fc;text-shadow:none;} .hide {display:none;}
+    .logo {width:7rem;height:7rem;position:absolute;top:-3em;left:calc((100vw / 2) - 3.5em);z-index:1;}
+    label.logo {top:-2em;text-align:center;width:25em;word-spacing:7em;transform:translateX(-35%);}
+    label.logo a {text-decoration:none;transform:perspective(2.5em) rotateX(15deg) scaleY(0.8);transition:all 0.5s;
+    display:inline-block;text-align:center;font-size:4em;font-weight:700;line-height:0.5;color:#08e3ff;
+    text-shadow:0 -1px 15px rgba(0, 0, 0, 0.9), 0 1px 0 #005d64, 0 3px 0 #006269, 0 5px 0 #00676e, 0 7px 0 #006c73, 0 9px 0 #007178, 0 6px 50px rgba(59, 233, 255, 0.8);}
+    label.logo a:first-line {font-size:0.8em;} label.logo a:hover {transform:perspective(8em) rotateX(11deg) scale(1.2);
+    text-shadow:0 -1px 15px black, 0 1px 0 #005d64, 0 2px 0 #006269, 0 0px 0 #00676e, 0 1px 0 #006c73, 0 2px 0 #007178, 0 2px 30px rgba(59, 233, 255, 0.6);}
+    @media (max-width: 479px) {img.logo {width:5rem;height:5em;left:calc((100vw / 2) - 2.5em);} label.logo {font-size:.7em}}
+    .shadow {box-shadow:0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.2);}
+    .white {background-color:#fff !important;} .blue-grey {background-color:#263238 !important;}
+    .grey {background-color:#424242 !important;} .grey-text {color:#424242 !important;} .white-text {color:#fff !important;} .red {background:#E91E63 !important;}
+    .ribbon {position:fixed;width:100%;height:40vh;flex-shrink:0;} .overlay {top:50%;left:0;position:absolute;width:100%;height:100%;background:rgba(0,0,0,.5);transform:translateY(-50%);}
+    .loader {position:relative;margin:0 auto;width:100px;height:100%;} .loader:before {content:'';display:block;padding-top:100%;}
+    .loader-circular {animation:rotate 2s linear infinite;height:100%;transform-origin:center center;width:100%;position:absolute;top:0;bottom:0;left:0;right:0;margin:auto;}
+    .loader-path {stroke-dasharray:1, 200;stroke-linecap: round;stroke-dashoffset:0;animation:dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;}
+    @keyframes rotate { 100% {transform:rotate(360deg);}}@keyframes dash { 0% {stroke-dasharray:1, 200;stroke-dashoffset:0;} 50% {stroke-dasharray:89, 200;stroke-dashoffset:-35px;}
+    100% {stroke-dasharray:89, 200;stroke-dashoffset:-124px;}}
+    @keyframes color { 100%, 0% {stroke:#d62d20;} 40% {stroke:#0057e7;} 66% {stroke:#008744;} 80%, 90% {stroke:#ffa700;}}
+    .snackbar {border:none;position:fixed;right:0;left:50%;z-index:2000;bottom:-112px;min-width:50vw;min-height:48px;max-height:112px;max-width:1235px;overflow:hidden;padding:14px 24px;margin:0;border-radius:2px;
+    font-size:1rem;color:white;background-color:#323232;background-clip:padding-box;box-sizing:border-box;-webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;
+    -ms-user-select:none;user-select:none;transition:all 200ms ease-out;transform:translateX(-50%);cursor:pointer;} .snackbar-msg {display:none;} .snackbar.snackbar-error {background-color:#B71C1C;}
+    @media only screen and (max-width: 600px) { #snackbar {width:100%;margin:0;border-radius:0px;}} #snackbar:last-child {padding:0 0 0 24px;float:right;color:#ffeb3b;text-decoration:none;text-transform:uppercase;}
+    main {position:relative;top:3em;flex-shrink:0;flex-grow:1;-webkit-overflow-scrolling:touch;}
+    main > div {max-width:1600px;width:calc(100% - 16px);margin:0px auto;display:flex;flex-flow:row wrap;align-items:stretch;}
+    @media (max-width: 479px) {main > div {padding:8px;}}
+    @media (min-width: 840px) {main > div {padding:8px;}}
+    @media (max-width: 839px) and (min-width: 480px) {main > div {padding:8px;}}
+    @media (max-width: 479px) {.margin {width:calc(50% - 16px);display:none !important;margin:8px;box-sizing:border-box;}}
+    @media (max-width: 839px) and (min-width: 480px) {.margin {width:calc(25% - 16px);display:none !important;margin:8px;box-sizing:border-box;}}
+    @media (min-width: 840px) {.margin {width:calc(16.6666666667% - 16px);margin:8px;box-sizing:border-box;}}
+    .content {min-height:calc(100vh - 15vh);margin-bottom:80px;border-radius:2px;box-sizing:border-box;}
+    .menu {position:relative;min-height:3em;width:100%;background:#03A9F4;}
+    @media (min-width: 840px) {.content {width:calc(66.6666666667% - 16px);margin:8px;}}
+    @media (max-width: 839px) and (min-width: 480px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1.5em !important;}}
+    @media (max-width: 479px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1em !important;}}
+    ul, ol {font-size:14px;line-height:24px;font-weight:400;letter-spacing:0;} .instruct {text-align:center;width:100%;background:#3F51B5;color:#fff;font-size:1.7em;padding:1em 0;}
+    a {color:rgb(255,82,82);font-weight: 500;}
+    a, button, checkbox, .icon-toggle, radio, .slider, .switch {-webkit-tap-highlight-color:transparent;-webkit-tap-highlight-color:rgba(255,255,255,0);}
+    button, input {overflow:visible;} button, input, optgroup, select, textarea {font-family:sans-serif;font-size:100%;line-height:1.15;margin:0;}
+    .center {display:flex;flex-flow:row nowrap;align-items:center;justify-content:center;} .container {padding:1rem 2rem;font-size:1.5em;text-align:center;}
+    input, select, textarea, body *,input::after,input::before,select::after,select::before,textarea::after,textarea::before {box-sizing:border-box;}
+    .form-radio, .md-grp {position:relative;margin-top:2.25em;margin-bottom:2.25em;} .md-grp input {height:1.9rem;} .md-grp textarea {resize:none;}
+    .md-grp .bar {position:relative;border-bottom:0.0625em solid #999;display:block;}
+    .md-grp .bar::before {content:'';height:0.125em;width:0;left:50%;bottom:-0.0625em;position:absolute;background:#03A9F4;transition:left 0.28s ease, width 0.28s ease;}
+    .md-grp select {width:100%;font-size:1em;height:1.6em;padding:0.125em 0.125em 0.0625em;background:none;border:none;line-height:1.6;box-shadow:none;}
+    .md-grp label {position:absolute;top:0.25em;left:0;pointer-events:none;padding-left:0.125em;z-index:1;color:#b3b3b3;font-size:1em;font-weight:normal;transition:all 180ms cubic-bezier(0.4, 0, 0.2, 1);}
+    .md-grp input, .md-grp textarea {display:block;background:none;padding:0.125em 0.125em 0.0625em;font-size:1em;border-width:0;border-color:transparent;line-height:1.9;
+    width:100%;transition:all 0.28s ease;box-shadow:none;margin-bottom:.5em;} .md-grp input:invalid:not(:focus), .md-grp textarea:invalid:not(:focus) {color:transparent;}
+    .md-grp select, .md-grp input:focus, .md-grp input:valid, .md-grp input.has-value, .md-grp textarea:focus, .md-grp textarea:valid, .md-grp textarea.has-value {color:#333;}
+    .md-grp select ~ label, .md-grp input:focus ~ label, .md-grp input:valid ~ label, .md-grp input.has-value ~ label, .md-grp textarea:focus ~ label,
+    .md-grp textarea:valid ~ label, .md-grp textarea.has-value ~ label {font-size:0.8em;color:grey;top:-1.5em;left:0;}
+    .md-grp input:placeholder-shown ~ label, .md-grp textarea:placeholder-shown ~ label {top:0.25em !important;}
+    .md-grp input:invalid ~ label, .md-grp textarea:invalid ~ label {color:#E91E63 !important;}
+    .md-grp select:invalid ~ .bar::before, .md-grp input:invalid ~ .bar::before, .md-grp textarea:invalid ~ .bar::before {width:100%;left:0;background:#E91E63;}
+    .md-grp select:focus, .md-grp input:focus, .md-grp textarea:focus {outline:none;} .md-grp select:focus ~ label, .md-grp input:focus ~ label, .md-grp textarea:focus ~ label {color:#03A9F4;}
+    .md-grp select:focus ~ .bar::before, .md-grp input:focus ~ .bar::before, .md-grp textarea:focus ~ .bar::before {width:100%;left:0;}
+    button {border:none;cursor:pointer;color:white;padding:15px 40px;border-radius:2px;box-shadow:2px 2px 4px rgba(0, 0, 0, .4);background:#03A9F4;position:relative;overflow:hidden;}
+    button:after {content:'';position:absolute;top:50%;left:50%;width:5px;height:5px;background:rgba(255, 255, 255, .5);opacity:0;border-radius:100%;transform:scale(1, 1) translate(-50%);transform-origin:50% 50%;}
+    button:focus:not(:active)::after {animation:ripple 500ms ease-out;} @keyframes ripple { 0% {transform:scale(0, 0);opacity:1;} 20% {transform:scale(25, 25);opacity:1;} 100% {opacity:0;transform:scale(40, 40);}}
+  </style>
+</head>
+<body class="grey" onload="mm.loaded()">
+  <div class="ribbon blue-grey"></div>
+  <main>
+    <div>
+      <div class="margin"></div>
+      <img src="/favicon.png" class="logo">
+      <label class="logo">
+        <a href="/">Moto Moon</a>
+      </label>
+      <div class="content shadow white grey-text">
+        <div class="menu"></div>
+        <form method="post" action="/data" id="viewer"></form>
+        <div class="overlay">
+          <div class="center loader" id="loader">
+            <svg class="loader-circular" viewBox="25 25 50 50">
+              <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="2" stroke-miterlimit="10"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="hide view" id="setup">
+    <div class="instruct">Enter a name and password for WiFi access</div>
+    <div class="container">
+      <div class="md-grp">
+        <input type="text" placeholder=" " minlength="3" required="required" name="ssid" id="ssid">
+        <label for="ssid">SSID Name</label><i class="bar"></i>
+      </div>
+      <div class="md-grp">
+        <input type="password" placeholder=" " minlength="8" required="required" name="password" id="password">
+        <label for="password">SSID Password</label><i class="bar"></i>
+      </div>
+      <button type="button" onclick="mm.formRequest(event)">Save</button>
+    </div>
+  </div>
+  <div class="hide view" id="anim">
+    <div class="instruct">Select or create a new animation to play</div>
+    <div class="container">
+      <div class="md-grp">
+        <input type="range" placeholder=" " minlength="3" required="required" name="ssid" id="ssid">
+        <label for="ssid">SSID Name</label><i class="bar"></i>
+      </div>
+      <div class="md-grp">
+        <input type="range" data-ticks-sel="#frameticks" required="required" min="1" max="30" value="1" name="frame" id="frame">
+        <label for="password">Amination Frame</label><i class="bar"></i>
+        <datalist id="frameticks"></datalist>
+      </div>
+      <button type="submit">Save</button>
+    </div>
+  </div>
+  <div class="snackbar">
+    <span>TEMPLATE</span>
+    <a href="#">DONE</a>
+  </div>
+  <script>
+    var mm = new MM();
+    function MM() {
+      this.loader = null;
+      this.animEndEvents = 'webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend';
+      this.snackbarTkoHandles = [];
+      this.snackbarShowDelay = 7000;
+      this.snackbarQueue = [];
+    }
+    MM.prototype.loaded = function loaded() {
+      var mmi = this;
+      mmi.views = {};
+      mmi.viewer = mmi.viewer || document.getElementById('viewer');
+      mmi.loader = mmi.loader || document.getElementById('loader');
+      for (var i = 0, vws = document.querySelectorAll('.view'); vws && vws[i]; ++i) {
+        if (!vws[i].id) continue;
+        vws[i].className = 'view';
+        mmi.views[vws[i].id] = vws[i].parentNode.removeChild(vws[i]);
+      }
+      mmi.request('GET', '/data');
+    };
+    MM.prototype.loadbar = function loadbar(hide) {
+      this.loader.classList[hide ? 'add' : 'remove']('hide');
+    };
+    MM.prototype.view = function view(json, req, opts, cb) {
+      var mmi = this;
+      mmi.viewer.innerHTML = '';
+      for (var nm in json) if (mmi.views[nm]) {
+        mmi.viewer.appendChild(mmi.views[nm]);
+        mmi.fillify(mmi.views[nm], json[nm]);
+      }
+      if (!opts.noLoading) mmi.loadbar(true);
+      var els = mmi.viewer.querySelectorAll('[data-snackbar-msg]');
+      if (els) for (var i = 0, l = els.length, msg; i < l; ++i) if ((msg = els[i].dataset.snackbarMsg) && !els[i].removeAttribute('data-snackbar-msg'))    
+        mmi.snackbar(null, mmi.messageJSON(msg, null, null, null, els[i].nextElementSibling && els[i].nextElementSibling.hasAttribute('data-snackbar-email') ? els[i].nextElementSibling : null));
+      if (typeof cb === 'function') cb(json, req);
+    };
+    MM.prototype.fillify = function fillify(el, json) {
+      for (var i = 0, dta, els = el instanceof Element ? el.querySelectorAll('[id]') || [] : []; els[i]; ++i) {
+        if (dta = json[els[i].id]) {
+          for (var nm in dta) {
+            switch (nm) {
+              case 'value': case 'innerHTML': case 'innerText': case 'textContent': els[i][nm] = dta[nm]; break;
+              default: els[i].setAttribute(nm, dta[nm]);
+            }
+          }
+        }
+        dta = els[i].querySelectorAll('[type=range]');
+        for (var j = 0, jel, oel; dta && dta[j]; ++j) {
+          jel = dta[j].dataset.ticksSel && document.querySelector(dta[j].dataset.ticksSel);
+          for (var k = parseInt(dta[j].min || 0), ks = k, kl = parseInt(dta[j].max || 0); k <= kl; ++k) {
+            oel = document.createElement('option');
+            oel.label = oel.value = k;
+            jel.appendChild(oel);
+          }
+        }
+      }
+    };
+    MM.prototype.formRequest = function formRequest(event, opts, cb) {
+      var mmi = this, frm = event.form, els = frm.elements, pyld = {};
+      if (!frm.reportValidity()) return;
+      mmi.request(frm.method, frm.action, pyld, opts, cb);
+    };
+    MM.prototype.request = function request(method, url, payload, opts, cb) {
+      if (!url || url.indexOf('?') > 0) throw new Error('Invlaid URL (parameters should be passed in payload): ' + url);
+      opts = opts || {};
+      // form.checkValidity() form.reportValidity()
+      method = (method || 'GET').toUpperCase();
+      var mmi = this, req = new XMLHttpRequest();
+      if (!opts.noLoading) mmi.loadbar();
+      req.onreadystatechange = function response() {
+        if (req.readyState === XMLHttpRequest.DONE) {
+          var ctyp = req.getResponseHeader('content-type'), json;
+          if (req.status === 0 || req.status !== 200) json = { error: new Error((req.statusText || 'Request Access Denied to ') + ' URL ' + url) };
+          else if (ctyp && ctyp.toLowerCase().indexOf('json') >= 0) try {
+            json = JSON.parse(req.responseText);
+          } catch (e) {
+            e.cause = 'JSON.parse error for response from URL ' + url;
+            json = { error: e };
+          }
+          mmi.view(json, req, opts, cb);
+        }
+      };
+      req.onerror = function responseError(e) {
+        if (req.status === 401) window.location.reload(); // session expired
+        if (!opts.ignoreErrors) console.error(req.statusText || e);
+        if (!opts.noLoading) mmi.loadbar(true);
+      };
+      payload = payload || {};
+      req.withCredentials = opts.withCredentials;
+      if (method === 'GET') {
+        var params = '';
+        if (payload) for (var pk in payload) params += (params.length ? '&' : '?') + encodeURIComponent(pk) + '=' + encodeURIComponent(payload[pk]);
+        req.open(method, url + params, true);
+        req.send(null);
+      } else {
+        req.open(method, url, true);
+        req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+        req.send(JSON.stringify(payload));
+      }
+      return req;
+    };
+    MM.prototype.snackbar = function snackbar(req, json, url, label, altMsg, hideCb) {
+      var mmi = this;
+      json = json || mmi.reqJSON(req, altMsg);
+      if (mmi.snackbarInProgress) {
+        mmi.snackbarQueue.push(arguments);
+        return json;
+      }
+      mmi.snackbarInProgress = true;
+      var sbo = document.querySelector('.snackbar'), sb = sbo.cloneNode(true), txt = sb.querySelector(':first-child'), lnk = sb.querySelector(':last-child');
+      if (sbo.classList) json._res.error ? sbo.classList.add('snackbar-error') : sbo.classList.remove('snackbar-error');
+      sbo.parentNode.replaceChild(sb, sbo); // ensure there are no pending listeners
+      for (var i = 0, l = mmi.snackbarTkoHandles.length; i < l; ++i) {
+        clearTimeout(mmi.snackbarTkoHandles[i]); // ensure there are no pending timeouts
+      }
+      mmi.snackbarTkoHandles.length = 0;
+      txt.innerText = (json._res && json._res.messageFull) || json.message;
+      if (json._res && json._res.htmlElements) {
+        var html = '';
+        for (var i = 0, els = Array.isArray(json._res.htmlElements) ? json._res.htmlElements : [json._res.htmlElements], l = els.length; i < l; ++i) html += els[i].innerHTML;
+        if (html) txt.innerHTML = html + txt.innerHTML;
+      }
+      console.log(txt.innerText);
+      if (json._res && json._res.error) console.error(json._res.error);
+      if (json._res && json._res.cause) console.error(json._res.cause);
+      if (url && label) {
+        lnk.innerText = label;
+        lnk.setAttribute('href', url);
+        lnk.style.display = 'inline-block';
+      } else lnk.style.display = 'none';
+      var tch = 'ontouchstart' in window || navigator.msMaxTouchPoints, pan = { dir: 'Right' }, tko = !tch || window.Modernizr ? 100 : 4000;
+      if (tch) at(sb, 'pan', false, function (ev) {
+        if (ev.gesture.pointerType === 'touch') {
+          pan.dirVal = ev.gesture.direction;
+          pan.x = ev.gesture.deltaX;
+          pan.velocityX = ev.gesture.velocityX;
+          pan.dir = pan.dirVal === 4 ? 'Left' : pan.dirVal === 2 ? 'Right' : pan.dir;
+          pan.swipeLeft = pan.dir === 'Left' && (pan.x > (-1 * sb.offsetWidth / 2) || pan.velocityX < -0.75);
+          pan.swipeRight = !pan.swipeLeft && pan.dir === 'Right' && (pan.x < (-1 * sb.offestWidth / 2) || pan.velocityX > 0.75);
+        }
+      });
+      sb.addEventListener(tch ? 'panend' : 'click', function snackbarCloseListener(ev) { // paning end or click will close snackbar message
+        if ((!tch && ev.gesture && ev.gesture.pointerType !== 'touch') || (tch && !pan.swipeLeft && !pan.swipeRight)) return;
+        mmi.snackbarPause = false;
+        mmi.snackbarTkoHandles.push(mmi.onWithTimeout(sb, mmi.animEndEvents, tko, true, snackbarHide));
+        sb.classList.add('animated');
+        sb.classList.add('slideOut');
+        sb.classList.add(pan.dir);
+      });
+      if (!tch) sb.addEventListener('mouseout', function snackbarPauseCloseListener(ev) {
+        mmi.snackbarPause = false;
+      });
+      if (!tch) sb.addEventListener('mouseover', function snackbarPauseCloseListener(ev) { // allow pausing on devices with a mouse
+        mmi.snackbarPause = true;
+      });
+      if (sb.style.bottom === '0px') { // according to spec the snackbar should be hidden before showing again
+        mmi.snackbarTkoHandles.push(mmi.onWithTimeout(sb, mmi.animEndEvents, tko, true, function snackbarReshowAnimEnd() {
+          mmi.snackbarTkoHandles.push(setTimeout(showAutoHide, 500)); // delay reshowing for visual affects
+        }));
+        sb.style.bottom = '-112px';
+      } else showAutoHide();
+      function showAutoHide() {
+        sb.style.bottom = '0px';
+        mmi.snackbarTkoHandles.push(setTimeout(snackbarHide, mmi.snackbarShowDelay));
+      }
+      function snackbarHide() {
+        if (mmi.snackbarPause) return showAutoHide();
+        sb.style.bottom = '-112px';
+        var args = mmi.snackbarQueue.shift();
+        mmi.snackbarInProgress = false;
+        if (args) mmi.snackbar.apply(mmi, args);
+        if (hideCb) hideCb();
+      }
+      return json;
+    };
+    MM.prototype.reqJSON = function reqJSON(req, altMsg) {
+      var mmi = this, ctyp = req.getResponseHeader('content-type'), json;
+      if (ctyp && ctyp.toLowerCase().indexOf('json') >= 0) try {
+        json = JSON.parse(req.responseText);
+        json._res = { jsonContent: true };
+        mmi.messageJSON(null, null, req, json);
+      } catch (e) {
+        json = mmi.messageJSON(altMsg || 'JSON.parse Error', e, req);
+      } else json = mmi.messageJSON(altMsg || 'Not a JSON response', null, req);
+      return json;
+    };
+    MM.prototype.messageJSON = function messageJSON(msg, msgObj, req, obj, htmlEls) {
+      var typ = typeof obj;
+      obj = (typ === 'object' && obj) || (typ === 'string' && { _res: { message: obj } }) || {};
+      obj._res = obj._res || {};
+      obj._res.message = obj._res.message || obj.message || msg || (msgObj && msgObj.message);
+      obj._res.statusCode = obj._res.statusCode || obj.statusCode || (req ? req.status : null);
+      obj._res.error = obj._res.error instanceof Error ? obj._res.error : obj.error instanceof Error ? obj.error : msgObj instanceof Error ? msgObj : null;
+      obj._res.cause = obj._res.error && obj._res.error.cause;
+      obj._res.date = obj._res.date || obj.date || new Date();
+      obj._res.timeStamp = obj._res.timeStamp || obj.timeStamp || obj._res.date.toLocaleTimeString().replace(/([\d]+:[\d]{2})(:[\d]{2})(.*)/, "$1$3");
+      obj._res.messageFull = obj._res.messageFull || obj.messageFull || ((obj._res.statusCode ? (obj._res.statusCode === 200 && 'INFO')
+        || ('HTTP ' + obj._res.statusCode) : obj._res.error ? 'ERROR' : '') + ' (' + obj._res.timeStamp + '): ' + obj._res.message + (obj._res.error && obj._res.error.message.trim() ? ' CAUSE: ' + obj._res.error : ''));
+      obj._res.jsonContent = obj._res.jsonContent || obj.jsonContent;
+      obj._res.htmlElements = htmlEls;
+      return obj;
+    };
+    MM.prototype.onWithTimeout = function onWithTimeout(el, evts, tko, once, cb) {
+      var mmi = this, tmh, fn = function timer() {
+        clearTimeout(tmh);
+        if (once) mmi.at(el, evts, undefined, true, fn);
+        if (arguments.length) cb.apply(this, arguments);
+        else cb();
+      };
+      mmi.at(el, evts, undefined, false, fn);
+      return tmh = setTimeout(fn, tko);
+    };
+    MM.prototype.at = function at(el, evts, useCapture, rm, fn) {
+      if (el && evts && fn) for (var i = 0, es = evts.split(' '), l = es.length; i < l; ++i) {
+        if (rm) el.removeEventListener(es[i], fn);
+        else el.addEventListener(es[i], fn, useCapture);
+      }
+    };
+  </script>
+</body>
+</html>
