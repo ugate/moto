@@ -45,17 +45,17 @@ ESP8266WebServer server(80);                                // the web server in
 #define COLS 19                   // the number of columns in the LED matrix
 #define ROWS 3                    // the number of rows in the LED matrix
 #define COL_CENTER_INDEX 9        // the index where the center LEDs are physically present between the two sections of the left/right turn signals
-#define FPS_FIRE 15               // frames/second for the fire animation
 #define MATRIX_SERPENTINE true    // LED matrix layouts: true = odd rows left -> right, even rows left -> right (false = all rows left -> right)
 
-#define FPS_FIRE_MILLIS round(1000 / FPS_FIRE)
-#define FPS (BPM * 1)
-#define FPS_ANIM_MILLIS round(1000 / FPS)
+#define FPS_ANIM_MILLIS round(1000 / BPM)
 #define NUM_LEDS (COLS * ROWS)
 #define NUM_CENTER_COLS 1
 #define NUM_RIGHT_COLS (COLS - COL_CENTER_INDEX - NUM_CENTER_COLS)
 #define NUM_LEFT_COLS (COLS - NUM_RIGHT_COLS - NUM_CENTER_COLS)
 #define MAX_DIMENSIONS ((COLS > ROWS) ? COLS : ROWS)
+#define SETUP_STAT_NONE 0
+#define SETUP_STAT_INIT 1
+#define SETUP_STAT_LED_COMPLETE 2
 #define ANIM_NOISE 1 << 1
 #define ANIM_FIRE 1 << 2
 #define ANIM_RAIN 1 << 3
@@ -87,7 +87,11 @@ uint8_t turn_bpm = BPM;                                   // beats/minute for tu
 uint8_t turn_fade = 0;                                    // rate at which the turn signals fade to black: 8 bit, 1 = slow, 255 = fast, 0 = immediate ::WEB_CONFIGURABLE::
 uint8_t turn_left_color_index = 0;                        // palette color index for the left turn signal (rotates through palette)
 uint8_t turn_right_color_index = 0;                       // palette color index for the left turn signal (rotates through palette)
-uint8_t noise_matrix[MAX_DIMENSIONS][MAX_DIMENSIONS];     // for tracking noise level dimensions
+uint16_t data16_x = 0;                                    // general data usage for animations (shared between animations in order to save on memory)
+uint16_t data16_y = 0;
+uint16_t data16_z = 0;
+uint8_t data8_x = 0;
+uint8_t data8_matrix[MAX_DIMENSIONS][MAX_DIMENSIONS];
 struct Pulse {
   uint8_t delta; uint16_t xy; uint16_t beat; uint16_t upper; uint16_t lower;
 };
@@ -115,35 +119,47 @@ void loop() {
   netLoop();
 }
 
-// LED fills for visual indication of server connection statuses 
-void netStatIndicator(const uint8_t stat, IPAddress ipLoc) {
-  CRGB rgb = CRGB::Black;
-  IPAddress ipBlank(0, 0, 0, 0);
-  if (ipLoc != ipBlank) {
-    fill_rainbow(leds, NUM_LEDS, 222); Serial.printf("IP: %s\n", ipLoc.toString().c_str());
+// LED fills for visual indication of server connection statuses
+void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, const char* ipLoc = "") {
+  if (stat == SETUP_STAT_INIT) { // turn on on-board LED indicating startup is in progress
+    pinMode(LED_BUILTIN, OUTPUT); // on-board LED
+    digitalWrite(LED_BUILTIN, LOW); Serial.println("Starting...");
+    data8_x = 0;
     return;
-  } else switch (stat) {
-    case WL_IDLE_STATUS:
-      rgb = CRGB::Blue; Serial.println("WiFi Idle...");
-      break;
-    case WL_SCAN_COMPLETED:
-      rgb = CRGB::Indigo; Serial.println("WiFi Scan completed...");
-      break;
-    case WL_NO_SSID_AVAIL:
-      rgb = CRGB::DarkOrange; Serial.printf("WiFi No SSID Available for: %s\n", ssid);
-      break;
-    case WL_CONNECTED:
-      rgb = CRGB::GreenYellow; Serial.printf("WiFi Connected to: %s\n", ssid); WiFi.printDiag(Serial);
-      break;
-    case WL_CONNECT_FAILED:
-      rgb = CRGB::Red; Serial.printf("WiFi Connection Failed for SSID: %s\n", ssid);
-      break;
-    case WL_CONNECTION_LOST:
-      rgb = CRGB::Magenta; Serial.printf("WiFi Connection lost for SSID: %s\n", ssid);
-      break;
-    case WL_DISCONNECTED:
-      rgb = CRGB::Yellow; Serial.printf("WiFi Disconnected from: %s\n", ssid);
-      break;
+  }
+  CRGB rgb = CRGB::Black;
+  if (stat == SETUP_STAT_LED_COMPLETE) {
+    rgb = CRGB::DarkSlateGray; Serial.println("LED setup complete");
+  } else if (netStat == WL_CONNECTED && ipLoc != "") {
+    FastLED.clear();
+    FastLED.show();
+    digitalWrite(LED_BUILTIN, HIGH); Serial.printf("Setup complete. Web access available at IP: %s\n", ipLoc);
+    return;
+  }
+  if (stat != SETUP_STAT_LED_COMPLETE) {
+    switch (netStat) {
+      case WL_IDLE_STATUS:
+        rgb = CRGB::Blue; Serial.println("WiFi Idle...");
+        break;
+      case WL_SCAN_COMPLETED:
+        rgb = CRGB::Indigo; Serial.println("WiFi Scan completed...");
+        break;
+      case WL_NO_SSID_AVAIL:
+        rgb = CRGB::DarkOrange; Serial.printf("WiFi No SSID Available for: %s\n", ssid);
+        break;
+      case WL_CONNECTED:
+        rgb = CRGB::Green; Serial.printf("WiFi Connected to: %s\n", ssid); WiFi.printDiag(Serial);
+        break;
+      case WL_CONNECT_FAILED:
+        rgb = CRGB::Red; Serial.printf("WiFi Connection Failed for SSID: %s\n", ssid);
+        break;
+      case WL_CONNECTION_LOST:
+        rgb = CRGB::Magenta; Serial.printf("WiFi Connection lost for SSID: %s\n", ssid);
+        break;
+      case WL_DISCONNECTED:
+        rgb = CRGB::Yellow; Serial.printf("WiFi Disconnected from: %s\n", ssid);
+        break;
+    }
   }
   fill_solid(leds, NUM_LEDS, rgb);
   FastLED.show();
@@ -153,22 +169,14 @@ void netStatIndicator(const uint8_t stat, IPAddress ipLoc) {
 
 void setup() {
   //system_update_cpu_freq(160); // 80 MHz or 160 MHz, default is 80 MHz
-  Serial.begin(115200); Serial.println("\nStarting...");
-
-  pinMode(LED_BUILTIN, OUTPUT); // on-board LED
+  Serial.begin(115200);
+  statusIndicator(SETUP_STAT_INIT);
   //delay(1000); // ESP8266 init delay
-
-  digitalWrite(LED_BUILTIN, LOW); // turn on on-board LED indicating startup is in progress
   
   ledSetup();
-  fill_solid(leds, NUM_LEDS, CRGB::DarkSlateGray); // indicate LED setup is complete
-  FastLED.show();
-
   netSetup();
 
   // demo
   //turnLeftOn();
   //turnRightOn();
-
-  digitalWrite(LED_BUILTIN, HIGH); // turn off
 }

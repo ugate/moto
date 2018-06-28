@@ -119,7 +119,7 @@ IPAddress netSetup() {
     do {
       WiFi.status();
       delay(500);
-      if ((wstat = WiFi.status()) != wstatp) netStatIndicator(wstat, ipLoc);
+      if ((wstat = WiFi.status()) != wstatp) statusIndicator(SETUP_STAT_NONE, wstat);
       wstatp = wstat;
     } while (WiFi.status() != WL_CONNECTED);
     ipLoc = WiFi.localIP();
@@ -135,6 +135,6 @@ IPAddress netSetup() {
   server.on("/data", HTTP_POST, postData);
   server.on("/manifest.json", HTTP_GET, getManifest);
   server.begin();
-  netStatIndicator(wstat, ipLoc);
+  statusIndicator(SETUP_STAT_NONE, wstat, ipLoc.toString().c_str());
   return ip;
 }
