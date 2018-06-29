@@ -56,6 +56,8 @@ ESP8266WebServer server(80);                                // the web server in
 #define SETUP_STAT_NONE 0
 #define SETUP_STAT_INIT 1
 #define SETUP_STAT_LED_COMPLETE 2
+#define SETUP_STAT_NET_PENDING 3
+#define SETUP_STAT_COMPLETE 4
 #define ANIM_NOISE 1 << 1
 #define ANIM_FIRE 1 << 2
 #define ANIM_RAIN 1 << 3
@@ -78,6 +80,7 @@ volatile byte led_flags = 0;                              // flags for tracking 
 unsigned long brakeOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay braking input
 unsigned long leftOffMillisPrev = 0;                      // used to avoid false-positives from possible fluctuations from external 12v relay left turn signal input
 unsigned long rightOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay right turn signal input
+unsigned long data_millis = 0;                            // general
 uint8_t run_anim_flags = ANIM_RAIN;                      // animations that will be applied for running lamps ::WEB_CONFIGURABLE::
 uint8_t run_speed = 8;                                    // animation speed for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
 uint8_t run_scale = 100;                                  // animation scale for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
@@ -123,20 +126,20 @@ void loop() {
 void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, const char* ipLoc = "") {
   if (stat == SETUP_STAT_INIT) { // turn on on-board LED indicating startup is in progress
     pinMode(LED_BUILTIN, OUTPUT); // on-board LED
-    digitalWrite(LED_BUILTIN, LOW); Serial.println("Starting...");
-    data8_x = 0;
+    digitalWrite(LED_BUILTIN, LOW); Serial.println("---> STARTING <---");
+    return;
+  } else if (stat == SETUP_STAT_COMPLETE) {
+    FastLED.clear();
+    FastLED.show();
+    digitalWrite(LED_BUILTIN, HIGH); Serial.println("---> READY <---");
     return;
   }
   CRGB rgb = CRGB::Black;
   if (stat == SETUP_STAT_LED_COMPLETE) {
     rgb = CRGB::DarkSlateGray; Serial.println("LED setup complete");
   } else if (netStat == WL_CONNECTED && ipLoc != "") {
-    FastLED.clear();
-    FastLED.show();
-    digitalWrite(LED_BUILTIN, HIGH); Serial.printf("Setup complete. Web access available at IP: %s\n", ipLoc);
-    return;
-  }
-  if (stat != SETUP_STAT_LED_COMPLETE) {
+    rgb = CRGB::Green; Serial.printf("Setup complete. Web access available at IP: %s\n", ipLoc);
+  } else if (stat != SETUP_STAT_LED_COMPLETE) {
     switch (netStat) {
       case WL_IDLE_STATUS:
         rgb = CRGB::Blue; Serial.println("WiFi Idle...");
@@ -148,7 +151,7 @@ void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, c
         rgb = CRGB::DarkOrange; Serial.printf("WiFi No SSID Available for: %s\n", ssid);
         break;
       case WL_CONNECTED:
-        rgb = CRGB::Green; Serial.printf("WiFi Connected to: %s\n", ssid); WiFi.printDiag(Serial);
+        rgb = CRGB::GreenYellow; Serial.printf("WiFi Connected to: %s\n", ssid); WiFi.printDiag(Serial);
         break;
       case WL_CONNECT_FAILED:
         rgb = CRGB::Red; Serial.printf("WiFi Connection Failed for SSID: %s\n", ssid);
@@ -179,4 +182,6 @@ void setup() {
   // demo
   //turnLeftOn();
   //turnRightOn();
+
+  statusIndicator(SETUP_STAT_COMPLETE);
 }

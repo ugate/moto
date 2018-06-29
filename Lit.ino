@@ -2,6 +2,7 @@
 
 // resets the general data values (saves memory by sharing
 void resetData() {
+  data_millis = 0;
   data16_x = run_anim_flags & ANIM_NOISE ? random16() : 0;
   data16_y = run_anim_flags & ANIM_NOISE ? random16() : 0;
   data16_z = run_anim_flags & ANIM_NOISE ? random16() : 0;
@@ -179,12 +180,14 @@ void fire(const CRGBPalette16& palette, const bool left, const bool right, uint8
   }
 }
 // random rain droplets, chanceOfRain in percentage (1%-100%) increases/decreases the number of simultaneous droplets falling at a given moment
-void rain(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 400, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
+void rain(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 100, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
   if ((!left && !right) || chanceOfRain == 0) return;
   const uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS;
-  const uint8_t maxd = 1/*chanceOfRain >= 100 ? width : round((width / 100.00) * chanceOfRain)*/, beat = beatsin16(BPM * speedo);
-  uint8_t cntd = 0;
+  const uint8_t maxd = chanceOfRain >= 100 ? width : round((width / 100.00) * chanceOfRain), change = millis() - data_millis;
   uint16_t x = xstart, y = 0, xy = 0;
+  uint8_t cntd = 0;
+  const bool inc = change > speedo;
+  if (inc) data_millis = millis();
   CRGB rgb;
   for (; x < width; ++x) { // for each column, move existing droplets down until they disappear
     rgb = CRGB::Black;
@@ -194,33 +197,36 @@ void rain(const CRGBPalette16& palette, const bool left, const bool right, const
       if (leds[xy]) cntd++;
       if (rgb) {
         leds[xy] = rgb; //leds[xy] = rgb;
-        rgb = CRGB::Black;
-        cntd++;
-        break; Serial.printf("MOVED DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
+        rgb = CRGB::Black; Serial.printf("MOVED DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
+        if (++cntd >= maxd) return; // we have enough droplets
+        break;
       } else if (leds[xy]) {
-        if (beat == 1) { Serial.printf("MOVING DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
-          if (y < ROWS - 1) rgb = leds[xy]; // proceed to light next row
-          leds[xy].fadeToBlackBy(64);
-        }
-      } //else if (leds[xy]) Serial.printf("SKIPPING DROPLET: %u (x) %u (y) %u (beat) %u (max droplets) %u (droplet count)\n", x, y, beatsin8(BPM), maxd, cntd);
-      data8_matrix[x][y] = beat;
+        if (inc) { Serial.printf("MOVING DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
+          rgb = leds[xy]; // proceed to light next row
+          leds[xy] = CRGB::Black;
+        } //else leds[xy].fadeToBlackBy(change);
+      }
     }
   }
-  if (cntd >= maxd) return; // we have enough droplets
-  for (uint16_t xi = xstart; xi < width; ++xi) { // form new random droplets that do not already occupy the same column
+  if (!inc || cntd >= maxd) return; // no droplet movement or we have enough droplets
+  for (uint16_t xi = xstart, xyf = 0; xi < width; ++xi) { // form new random droplets that do not already occupy the same column
     if (cntd >= maxd) break; // we have enough droplets
     x = random8(xstart, width - 1);
     y = 0;
     for (; y < ROWS; ++y) {
       xy = XY(x, y, width, serpentine);
+      if (y == 0) xyf = xy;
       if (leds[xy]) { // occupied
         x = width;
         break;
       }
     } if (x < width) Serial.printf("NEW DROPLET: %u (x) %u (width) %u (max droplets) %u (droplet count)\n", x, width, maxd, cntd + 1);
-    if (x < width && ++cntd) leds[XY(x, 0, width, serpentine)] = fadeTowardColor(leds[xy], CRGB::White, 5);//CRGB::White;
-  }
-  Serial.printf("---> END DROPLET: %u (max droplets) %u (droplet count)\n", maxd, cntd);
+    if (x < width && ++cntd) {
+      rgb = ColorFromPalette(palette, brake_color_index, 255);
+      leds[xyf] = rgb;
+      brake_color_index++;
+    }
+  } Serial.printf("---> END DROPLET: %u (max droplets) %u (droplet count)\n", maxd, cntd);
 }
 void rain2(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 400, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
   
