@@ -37,7 +37,7 @@ CRGB fadeTowardColor(CRGB& cur, const CRGB& target, uint8_t amount) {
   return cur;
 }
 // fills a matrix pixel region (fades toward rgb from thecurrent color when fade > 0)
-void fill_matrix(const CRGB rgb, const uint16_t xy1, const uint16_t xy2, const uint8_t fade = 0) { //Serial.printf("FILL MATRIX: rgb(%u, %u, %u) %u (pixel start) %u (pixel end) %u (fade rate)\n", rgb.r, rgb.g, rgb.b, xy1, xy2, fade);
+void fill_matrix(const CRGB rgb, const uint16_t xy1, const uint16_t xy2, const uint8_t fade = 0) {//Serial.printf("FILL MATRIX: rgb(%u, %u, %u) %u (pixel start) %u (pixel end) %u (fade rate)\n", rgb.r, rgb.g, rgb.b, xy1, xy2, fade);
   for (uint16_t xy = xy1; xy <= xy2; xy++) {
     if (fade > 0) fadeTowardColor(leds[xy], rgb, fade); //leds[xy].nscale8(fade);
     else leds[xy] = rgb;
@@ -45,13 +45,22 @@ void fill_matrix(const CRGB rgb, const uint16_t xy1, const uint16_t xy2, const u
 }
 // fadeToBlackBy, but with a matrix pixel range and option for immediate (i.e. fade == 0)
 void fill_matrix(const CRGB rgb, const uint16_t xstart, const uint16_t width, const uint16_t ystart, const uint16_t height, const uint8_t fade = 0, const bool serpentine = MATRIX_SERPENTINE) {
-  uint16_t xy = 0; //Serial.printf("FILL MATRIX: rgb(%u, %u, %u) %u (x start) %u (width) %u (y start) %u (height) %u (fade rate)\n", rgb.r, rgb.g, rgb.b, xstart, width, ystart, height, fade);
+  uint16_t xy = 0;//Serial.printf("FILL MATRIX: rgb(%u, %u, %u) %u (x start) %u (width) %u (y start) %u (height) %u (fade rate)\n", rgb.r, rgb.g, rgb.b, xstart, width, ystart, height, fade);
   for (uint16_t y = ystart; y < height; y++) {
     for (uint16_t x = xstart; x < width; x++) {
       xy = XY(x, y, width, serpentine);
       fill_matrix(rgb, xy, xy, fade);
     }
   }
+}
+// fills a display with a color
+void fill_display(const CRGB rgb, const bool left, const bool right, const uint8_t fade = 0, const bool serpentine = MATRIX_SERPENTINE) {
+  if (!left && !right) return;
+  if (left && right && rgb.getLuma() == 0) fadeToBlackBy(leds, NUM_LEDS, fade); // fade: 8 bit, 1 = slow, 255 = fast
+  else if (left && right && fade == 255) fill_solid(leds, NUM_LEDS, rgb);
+  else if (left && right) fill_matrix(rgb, 0, COLS, 0, ROWS, fade);
+  else if (left) fill_matrix(rgb, 0, NUM_LEFT_COLS, 0, ROWS, fade);
+  else fill_matrix(rgb, NUM_LEFT_COLS + NUM_CENTER_COLS, COLS, 0, ROWS, fade);
 }
 // similar to the built-in map function except it is confined to a submatrix region that spans multiple rows on the left/right side of the display
 void mapToSide(uint16_t& xy, const bool left, const bool right, const bool clearRegion = false, const bool serpentine = MATRIX_SERPENTINE) {
@@ -69,8 +78,7 @@ void mapToSide(uint16_t& xy, const bool left, const bool right, const bool clear
         xyl ^= xyu; // swap
         xyu ^= xyl;
         xyl ^= xyu;
-      }
-      //Serial.printf("%u) %u (xy PRE-ADJUST) %u (xy) %u (lower) %u (upper)\n", y, xy, map(xy, xycl, xycu, xyl, xyu), xyl, xyu);
+      }//Serial.printf("%u) %u (xy PRE-ADJUST) %u (xy) %u (lower) %u (upper)\n", y, xy, map(xy, xycl, xycu, xyl, xyu), xyl, xyu);
       xy = map(xy, xycl, xycu, xyl, xyu); // map to submatrix range
       break;
     }
@@ -197,11 +205,11 @@ void rain(const CRGBPalette16& palette, const bool left, const bool right, const
       if (leds[xy]) cntd++;
       if (rgb) {
         leds[xy] = rgb; //leds[xy] = rgb;
-        rgb = CRGB::Black; Serial.printf("MOVED DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
+        rgb = CRGB::Black;//Serial.printf("MOVED DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
         if (++cntd >= maxd) return; // we have enough droplets
         break;
       } else if (leds[xy]) {
-        if (inc) { Serial.printf("MOVING DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
+        if (inc) {//Serial.printf("MOVING DROPLET: %u (x) %u (y) %u (max droplets) %u (droplet count)\n", x, y, maxd, cntd);
           rgb = leds[xy]; // proceed to light next row
           leds[xy] = CRGB::Black;
         } //else leds[xy].fadeToBlackBy(change);
@@ -220,16 +228,13 @@ void rain(const CRGBPalette16& palette, const bool left, const bool right, const
         x = width;
         break;
       }
-    } if (x < width) Serial.printf("NEW DROPLET: %u (x) %u (width) %u (max droplets) %u (droplet count)\n", x, width, maxd, cntd + 1);
+    }//if (x < width) Serial.printf("NEW DROPLET: %u (x) %u (width) %u (max droplets) %u (droplet count)\n", x, width, maxd, cntd + 1);
     if (x < width && ++cntd) {
       rgb = ColorFromPalette(palette, brake_color_index, 255);
       leds[xyf] = rgb;
       brake_color_index++;
     }
-  } Serial.printf("---> END DROPLET: %u (max droplets) %u (droplet count)\n", maxd, cntd);
-}
-void rain2(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 400, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
-  
+  }//Serial.printf("---> END DROPLET: %u (max droplets) %u (droplet count)\n", maxd, cntd);
 }
 // 4 (1/2 display) or 8 (full display) colored pixels weaving in and out of sync with each other
 void juggle(const CRGBPalette16& palette, const bool left, const bool right, uint8_t speedOffset = 0, const bool serpentine = MATRIX_SERPENTINE) {
@@ -245,8 +250,27 @@ void juggle(const CRGBPalette16& palette, const bool left, const bool right, uin
     //hue += 32;
   }
 }
-// 8-bit inoise8 patterns: cycleColor true to cycle colors vs using them all at once, speedo to increase/decrease animation speed (1..60), scale invert to increase/decrease size of animated regions
-void noise8(const CRGBPalette16& palette, const bool left, const bool right, const bool cycleColor = false, const uint16_t speedo = 8, const uint16_t scale = 100, const bool serpentine = MATRIX_SERPENTINE) {
+// 4 (1/2 display) or 8 (full display) colored pixels weaving in and out of sync with each other
+void trace(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 500, const bool serpentine = MATRIX_SERPENTINE) {
+  if (!left && !right) return;
+  const uint8_t change = millis() - data_millis;
+  if (change > speedo) {
+    data_millis = millis();
+    data8_x++;
+  }
+  uint16_t x = 0, y = 0, xy = 0;
+  fill_display(palette[data8_x], left, right, 64);
+  /*uint16_t xy = 0;
+  for (uint8_t i = 0; i < bcnt; i++) {
+    xy = beatsin16(i + speedOffset, 0, NUM_LEDS - 1);
+    mapToSide(xy, left, right, true, serpentine); // map to either the left or right side when doesnt span the entire display
+    leds[xy] = palette[beatsin8(i + speedOffset, 0, 15)]; //addmod8(i, 1, 16);
+    //leds[xy] |= CHSV(hue, 200, 255);
+    //hue += 32;
+  }*/
+}
+// 8-bit inoise8 patterns: speedo to increase/decrease animation speed (1..60), scale invert to increase/decrease size of animated regions, cycleColor true to cycle colors vs using them all at once
+void noise8(const CRGBPalette16& palette, const bool left, const bool right, const uint16_t speedo = 8, const uint16_t scale = 100, const bool cycleColor = false, const bool serpentine = MATRIX_SERPENTINE) {
   if (!left && !right) return;
   uint8_t smooth = speedo < BPM ? 200 - (speedo * 4) : 0; // smooth out some 8-bit artifacts that become visible from frame-to-frame when running at a low speed
   uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS, maxDimension = width > ROWS ? width : ROWS, data = 0, ci = 0, luz = 0;
@@ -280,45 +304,37 @@ void noise8(const CRGBPalette16& palette, const bool left, const bool right, con
 // debounce flag check for off condition (prevents in sudden fluctuations when turning flags off)
 void flagged(byte onFlag, byte offFlag, unsigned long *msp) {
   if (led_flags & offFlag) { // off flagged
-    if (millis() - *msp > DETECT_MILLIS) {
-      //Serial.printf("%s turn signal off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left" : "Right", millis() - *msp);
+    if (millis() - *msp > DETECT_MILLIS) {//Serial.printf("%s off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left turn signal" : RIGHT_OFF ? "Right turn signal" : "Brake lights", millis() - *msp);
       *msp = millis();
       led_flags &= ~onFlag; // remove on flag
     }
   }
 }
 void brakeOn() {
-  //Serial.println("Brakes ON received");
-  led_flags |= BRAKE_ON; // add
   led_flags &= ~BRAKE_OFF; // remove
+  led_flags |= BRAKE_ON; // add
+  //Serial.printf("Brakes on... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
 }
 void brakeOff() {
-  //Serial.println("Brakes OFF received");
-  led_flags |= BRAKE_OFF; // add
   led_flags &= ~BRAKE_ON; // remove
+  led_flags |= BRAKE_OFF; // add
+  //Serial.printf("Brakes off... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
 }
 void turnLeftOn() {
-  //Serial.println("Left turn signal ON received");
   led_flags |= LEFT_ON; // add
+  //Serial.printf("Left turn signal on... LEFT_ON: %d\n", led_flags & LEFT_ON);
 }
 void turnLeftOff() {
-  //Serial.println("Left turn signal OFF received");
   led_flags |= LEFT_OFF; // add
+  //Serial.printf("Left turn signal off... LEFT_OFF: %d\n", led_flags & LEFT_OFF);
 }
 void turnRightOn() {
-  //Serial.println("Right turn signal ON received");
   led_flags |= RIGHT_ON; // add
+  //Serial.printf("Right turn signal on... RIGHT_ON: %d\n", led_flags & RIGHT_ON);
 }
 void turnRightOff() {
-  //Serial.println("Right turn signal OFF received");
   led_flags |= RIGHT_OFF; // add
-}
-
-// when errors occurred during setup the error loop should be called instead of the ledLoop 
-void ledErrorLoop() {
-  EVERY_N_MILLISECONDS(1000) {
-    
-  }
+  //Serial.printf("Right turn signal off... RIGHT_OFF: %d\n", led_flags & RIGHT_OFF);
 }
 
 // should be called in the main loop
@@ -329,22 +345,22 @@ void ledLoop() {
   EVERY_N_MILLISECONDS(FPS_ANIM_MILLIS) {
     //memcpy8(buffer, leds, sizeof(leds)); // copy values from buffer to LEDs
     //memset8(leds, 0, NUM_LEDS * sizeof(CRGB)); // clear the LED pixel buffer
-    if (led_flags & BRAKE_ON) {
-      // brake animation on
-    } else if (!(led_flags & LEFT_ON && led_flags & RIGHT_ON)) { // ensure that the warning lights are not on (i.e. simultaneous left/right turn signals)
-      // black out the pixels where the running lamp animation will be displayed
-      if (!(run_anim_flags & ANIM_RAIN)) { Serial.printf("BLACKOUT: %d (left) %d (right)", led_flags & LEFT_ON, led_flags & RIGHT_ON); // some animations handle their own black out
-        if (!(led_flags & LEFT_ON) && !(led_flags & RIGHT_ON)) fadeToBlackBy(leds, NUM_LEDS, 255); // 8 bit, 1 = slow, 255 = fast
-        else if (led_flags & LEFT_ON) fill_matrix(CRGB::Black, NUM_LEFT_COLS + NUM_CENTER_COLS, COLS, 0, ROWS, 255); // black out right side of the display only
-        else fill_matrix(CRGB::Black, 0, NUM_LEFT_COLS, 0, ROWS, 255); // black out left side of the display only 
+    if (!(led_flags & LEFT_ON && led_flags & RIGHT_ON)) { // ensure that the warning lights are not on (i.e. simultaneous left/right turn signals)
+      // black out the pixels where the brake or running lamp animation will be displayed
+      if ((led_flags & BRAKE_ON && !(brake_anim_flags & ANIM_RAIN)) || (!(led_flags & BRAKE_ON) && !(run_anim_flags & ANIM_RAIN))) { // some animations handle their own black out
+        //Serial.printf("BLACKOUT: %d (left) %d (right)\n", led_flags & LEFT_ON, led_flags & RIGHT_ON);
+        fill_display(CRGB::Black, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
       }
-      // run selected running lamp animation(s)
-      if (run_anim_flags & ANIM_NOISE) noise8(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), run_color_cycle, run_speed, run_scale);
-      if (run_anim_flags & ANIM_FIRE) fire(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if (run_anim_flags & ANIM_RAIN) rain(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if (run_anim_flags & ANIM_JUGGLE) juggle(RunPalette_p, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if (run_anim_flags & ANIM_CONFETTI) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), true);
-      if (run_anim_flags & ANIM_GLITTER) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      // run selected brake or running lamp animation(s)
+      const TProgmemPalette16 *palette = led_flags & BRAKE_ON ? &BrakePalette_p : &RunPalette_p;
+      if (led_flags & BRAKE_ON && brake_anim_flags & ANIM_NOISE) noise8(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), brake_speed, brake_scale);
+      else if (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_NOISE) noise8(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), run_speed, run_scale);
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_TRACE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_TRACE)) trace(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_FIRE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_FIRE)) fire(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_RAIN) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_RAIN)) rain(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_JUGGLE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_JUGGLE)) juggle(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_CONFETTI) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_CONFETTI)) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), true);
+      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_GLITTER) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_GLITTER)) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
     }
     //Serial.printf("Left turn signal is %s, Right turn signal is %s\n", led_flags & LEFT_ON ? "ON" : led_flags & LEFT_OFF ? "OFF" : "N/A", led_flags & RIGHT_ON ? "ON" : led_flags & RIGHT_OFF ? "OFF" : "N/A");
     if (led_flags & LEFT_ON || led_flags & RIGHT_ON) turnSignal(TurnPalette_p, led_flags & LEFT_ON, led_flags & RIGHT_ON);
@@ -357,6 +373,7 @@ void ledLoop() {
 // should be called in the main setup
 void ledSetup() {
   led_flags |= RUN_ON; // add
+  brakeOffMillisPrev = leftOffMillisPrev = rightOffMillisPrev = millis();
   pinMode(PIN_BRAKE, INPUT_PULLUP);
   pinMode(PIN_TURN_LEFT, INPUT_PULLUP);
   pinMode(PIN_TURN_RIGHT, INPUT_PULLUP);
