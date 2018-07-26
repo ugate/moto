@@ -2,10 +2,11 @@
 
 // resets the general data values (saves memory by sharing
 void resetData() {
+  const bool isNoise = (led_flags & BRAKE_ON && brake_anim_flags & ANIM_NOISE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_NOISE);
   data_millis = 0;
-  data16_x = run_anim_flags & ANIM_NOISE ? random16() : 0;
-  data16_y = run_anim_flags & ANIM_NOISE ? random16() : 0;
-  data16_z = run_anim_flags & ANIM_NOISE ? random16() : 0;
+  data16_x = isNoise ? random16() : 0;
+  data16_y = isNoise ? random16() : 0;
+  data16_z = isNoise ? random16() : 0;
   data8_x = 0;
 }
 // This function will return the right 'led index number' for a given set of X and Y coordinates on your matrix
@@ -19,7 +20,7 @@ uint16_t XY(const uint16_t x, const uint16_t y, uint16_t numCols = COLS, const b
   if (!serpentine || !(y & 0x01)) xy = (y * numCols) + x; // even rows run forwards
   else { // odd rows run backwards
     uint8_t reverseX = (numCols - 1) - x;
-    xy = (y * numCols) + reverseX;
+    xy = (y * numCols) + reverseX;//Serial.printf("(%u:y * %u:numCols) + (%u:numCols - 1) - %u:x = %u:xy\n", y, numCols, numCols, x, xy);
   }
   return xy;
 }
@@ -159,6 +160,7 @@ void sinelon(uint8_t hue) {
 // random fire-like movement, hot (0...255) increase for brightness, cooling (0...255) increase for smaller fire
 void fire(const CRGBPalette16& palette, const bool left, const bool right, uint8_t hot = 120, uint8_t cooling = 120) {
   if (!left && !right) return;
+  fill_display(CRGB::Black, left, right); //Serial.printf("BLACKOUT: %d (left) %d (right)\n", left, right);
   uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS;
   /*static*/ uint16_t spark[COLS]; // base heat
   CRGB stack[width][ROWS]; // stacks that are cooler
@@ -188,13 +190,13 @@ void fire(const CRGBPalette16& palette, const bool left, const bool right, uint8
   }
 }
 // random rain droplets, chanceOfRain in percentage (1%-100%) increases/decreases the number of simultaneous droplets falling at a given moment
-void rain(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 100, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
+void rain(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t wait = 100, const uint8_t chanceOfRain = 30, const bool serpentine = MATRIX_SERPENTINE) {
   if ((!left && !right) || chanceOfRain == 0) return;
-  const uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS;
+  const uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && right ? COLS : left ? NUM_LEFT_COLS : NUM_RIGHT_COLS;
   const uint8_t maxd = chanceOfRain >= 100 ? width : round((width / 100.00) * chanceOfRain), change = millis() - data_millis;
   uint16_t x = xstart, y = 0, xy = 0;
   uint8_t cntd = 0;
-  const bool inc = change > speedo;
+  const bool inc = change > wait;
   if (inc) data_millis = millis();
   CRGB rgb;
   for (; x < width; ++x) { // for each column, move existing droplets down until they disappear
@@ -239,6 +241,7 @@ void rain(const CRGBPalette16& palette, const bool left, const bool right, const
 // 4 (1/2 display) or 8 (full display) colored pixels weaving in and out of sync with each other
 void juggle(const CRGBPalette16& palette, const bool left, const bool right, uint8_t speedOffset = 0, const bool serpentine = MATRIX_SERPENTINE) {
   if (!left && !right) return;
+  fill_display(CRGB::Black, left, right); //Serial.printf("BLACKOUT: %d (left) %d (right)\n", left, right);
   const uint8_t bcnt = left && right ? 8 : 4;
   if (speedOffset == 0) speedOffset = left && right ? bcnt - 1 : bcnt * 4;
   uint16_t xy = 0;
@@ -250,28 +253,33 @@ void juggle(const CRGBPalette16& palette, const bool left, const bool right, uin
     //hue += 32;
   }
 }
-// 4 (1/2 display) or 8 (full display) colored pixels weaving in and out of sync with each other
-void trace(const CRGBPalette16& palette, const bool left, const bool right, const uint8_t speedo = 500, const bool serpentine = MATRIX_SERPENTINE) {
+// pulsates through colors in a color palette: traceColor will run the perimeter of the display (or CRGB::Black to ommit tracing),
+// fade value changes how drastic color changes appear (0 = immediate, 1 = faint, 255 = drastic), wait is the delay in MS between color changes
+void pulse(const CRGBPalette16& palette, const bool left, const bool right, const CRGB traceColor = CRGB::White, const uint8_t fade = 10, const uint8_t wait = 50, const bool serpentine = MATRIX_SERPENTINE) {
   if (!left && !right) return;
   const uint8_t change = millis() - data_millis;
-  if (change > speedo) {
+  if (change > wait) {
     data_millis = millis();
     data8_x++;
   }
-  uint16_t x = 0, y = 0, xy = 0;
-  fill_display(palette[data8_x], left, right, 64);
-  /*uint16_t xy = 0;
-  for (uint8_t i = 0; i < bcnt; i++) {
-    xy = beatsin16(i + speedOffset, 0, NUM_LEDS - 1);
-    mapToSide(xy, left, right, true, serpentine); // map to either the left or right side when doesnt span the entire display
-    leds[xy] = palette[beatsin8(i + speedOffset, 0, 15)]; //addmod8(i, 1, 16);
-    //leds[xy] |= CHSV(hue, 200, 255);
-    //hue += 32;
-  }*/
+  CRGB rgb = palette[scale8(data8_x, 15)];
+  fill_display(rgb, left, right, fade);
+  if (traceColor.getLuma() > 0) {
+    const uint8_t width = left && right ? COLS : left ? NUM_LEFT_COLS : NUM_RIGHT_COLS;
+    const uint16_t xmin = left ? 0 : NUM_LEFT_COLS + NUM_CENTER_COLS, xmax = right ? COLS - 1 : NUM_LEFT_COLS - 1;
+    if (data16_x < xmin) data16_x = xmin;
+    if (data16_y < 0) data16_y = 0;
+    data16_z = data16_z == RIGHT && data16_x + 1 > xmax ? DOWN : data16_z == DOWN && data16_y + 1 > ROWS - 1 ? LEFT : data16_z == LEFT && data16_x - 1 < xmin ? UP : data16_z == UP && data16_y - 1 < 0 ? RIGHT : data16_z;
+    if (change > wait) data16_y += data16_z == DOWN ? 1 : data16_z == UP ? -1 : 0;
+    if (change > wait) data16_x += data16_z == RIGHT ? 1 : data16_z == LEFT ? -1 : 0;
+    uint16_t xy = XY(data16_x, data16_y, COLS, serpentine);
+    leds[xy] = traceColor; //Serial.printf("PULSE %u (x) %u (y) %u (direction) %u (xmin) %u (xmax) %u (xy)\n", data16_x, data16_y, data16_z, xmin, xmax, xy);
+  }
 }
 // 8-bit inoise8 patterns: speedo to increase/decrease animation speed (1..60), scale invert to increase/decrease size of animated regions, cycleColor true to cycle colors vs using them all at once
 void noise8(const CRGBPalette16& palette, const bool left, const bool right, const uint16_t speedo = 8, const uint16_t scale = 100, const bool cycleColor = false, const bool serpentine = MATRIX_SERPENTINE) {
   if (!left && !right) return;
+  fill_display(CRGB::Black, left, right); //Serial.printf("BLACKOUT: %d (left) %d (right)\n", left, right); 
   uint8_t smooth = speedo < BPM ? 200 - (speedo * 4) : 0; // smooth out some 8-bit artifacts that become visible from frame-to-frame when running at a low speed
   uint8_t xstart = !left && right ? NUM_LEFT_COLS + NUM_CENTER_COLS : 0, width = left && !right ? NUM_LEFT_COLS : COLS, maxDimension = width > ROWS ? width : ROWS, data = 0, ci = 0, luz = 0;
   uint16_t ioffset = 0, joffset = 0;
@@ -302,7 +310,7 @@ void noise8(const CRGBPalette16& palette, const bool left, const bool right, con
   if (cycleColor) data8_x++;
 }
 // debounce flag check for off condition (prevents in sudden fluctuations when turning flags off)
-void flagged(byte onFlag, byte offFlag, unsigned long *msp) {
+void flagged(byte onFlag, byte offFlag, unsigned long* msp) {
   if (led_flags & offFlag) { // off flagged
     if (millis() - *msp > DETECT_MILLIS) {//Serial.printf("%s off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left turn signal" : RIGHT_OFF ? "Right turn signal" : "Brake lights", millis() - *msp);
       *msp = millis();
@@ -346,25 +354,21 @@ void ledLoop() {
     //memcpy8(buffer, leds, sizeof(leds)); // copy values from buffer to LEDs
     //memset8(leds, 0, NUM_LEDS * sizeof(CRGB)); // clear the LED pixel buffer
     if (!(led_flags & LEFT_ON && led_flags & RIGHT_ON)) { // ensure that the warning lights are not on (i.e. simultaneous left/right turn signals)
-      // black out the pixels where the brake or running lamp animation will be displayed
-      if ((led_flags & BRAKE_ON && !(brake_anim_flags & ANIM_RAIN)) || (!(led_flags & BRAKE_ON) && !(run_anim_flags & ANIM_RAIN))) { // some animations handle their own black out
-        //Serial.printf("BLACKOUT: %d (left) %d (right)\n", led_flags & LEFT_ON, led_flags & RIGHT_ON);
-        fill_display(CRGB::Black, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      }
       // run selected brake or running lamp animation(s)
       const TProgmemPalette16 *palette = led_flags & BRAKE_ON ? &BrakePalette_p : &RunPalette_p;
       if (led_flags & BRAKE_ON && brake_anim_flags & ANIM_NOISE) noise8(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), brake_speed, brake_scale);
       else if (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_NOISE) noise8(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), run_speed, run_scale);
-      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_TRACE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_TRACE)) trace(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_FIRE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_FIRE)) fire(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_RAIN) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_RAIN)) rain(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
-      if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_JUGGLE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_JUGGLE)) juggle(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      else if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_PULSE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_PULSE))
+        pulse(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), led_flags & BRAKE_ON && (led_flags & LEFT_ON || led_flags & RIGHT_ON) ? CRGB::Black : CRGB::White, 20); // turn signal + brake = no tracing
+      else if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_FIRE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_FIRE)) fire(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      else if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_RAIN) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_RAIN)) rain(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
+      else if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_JUGGLE) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_JUGGLE)) juggle(*palette, !(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
       if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_CONFETTI) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_CONFETTI)) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON), true);
       if ((led_flags & BRAKE_ON && brake_anim_flags & ANIM_GLITTER) || (!(led_flags & BRAKE_ON) && run_anim_flags & ANIM_GLITTER)) glitter(!(led_flags & LEFT_ON), !(led_flags & RIGHT_ON));
     }
     //Serial.printf("Left turn signal is %s, Right turn signal is %s\n", led_flags & LEFT_ON ? "ON" : led_flags & LEFT_OFF ? "OFF" : "N/A", led_flags & RIGHT_ON ? "ON" : led_flags & RIGHT_OFF ? "OFF" : "N/A");
     if (led_flags & LEFT_ON || led_flags & RIGHT_ON) turnSignal(TurnPalette_p, led_flags & LEFT_ON, led_flags & RIGHT_ON);
-    fill_matrix(CRGB::Black, COL_CENTER_INDEX, COL_CENTER_INDEX + 1, 0, ROWS, 0); // center channel should not be lit
+    //fill_matrix(CRGB::Black, COL_CENTER_INDEX, COL_CENTER_INDEX + 1, 0, ROWS, 0); // center channel should not be lit
     FastLED.show();
   }
   //Serial.println(LEDS.getFPS());

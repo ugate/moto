@@ -62,9 +62,9 @@ ESP8266WebServer server(80);                                // the web server in
 #define ANIM_FIRE 1 << 2
 #define ANIM_RAIN 1 << 3
 #define ANIM_JUGGLE 1 << 4
-#define ANIM_CONFETTI 1 << 5
-#define ANIM_GLITTER 1 << 6
-#define ANIM_ERROR 1 << 7
+#define ANIM_PULSE 1 << 5
+#define ANIM_CONFETTI 1 << 6
+#define ANIM_GLITTER 1 << 7
 #define TURN_RISING 1 << 0
 #define TURN_STAY_LIT_BACKWARDS 1 << 1
 #define TURN_CYLON 1 << 2
@@ -76,16 +76,22 @@ ESP8266WebServer server(80);                                // the web server in
 #define LEFT_OFF 1 << 5
 #define RIGHT_ON 1 << 6
 #define RIGHT_OFF 1 << 7
+#define RIGHT 0
+#define DOWN 1
+#define LEFT 2
+#define UP 3
 volatile byte led_flags = 0;                              // flags for tracking LED states (separate ON/OFF flags for each state should exist to account for spurts of false-positive irregularities)
 unsigned long brakeOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay braking input
 unsigned long leftOffMillisPrev = 0;                      // used to avoid false-positives from possible fluctuations from external 12v relay left turn signal input
 unsigned long rightOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay right turn signal input
 unsigned long data_millis = 0;                            // general
-uint8_t run_anim_flags = ANIM_RAIN;                      // animations that will be applied for running lamps ::WEB_CONFIGURABLE::
+uint8_t run_anim_flags = ANIM_NOISE;                      // animations that will be applied for running lamps ::WEB_CONFIGURABLE::
 uint8_t run_speed = 8;                                    // animation speed for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
 uint8_t run_scale = 100;                                  // animation scale for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
-bool run_color_cycle = false;                             // animation on/off switch color cycle for running lamps (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
+uint8_t brake_speed = 8;                                  // animation speed for brake lights (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
+uint8_t brake_scale = 100;                                // animation scale for brake lights (may only be applicable for certain animations) ::WEB_CONFIGURABLE::
 uint8_t brake_color_index = 0;                            // palette color index for the brake light (rotates through palette)
+uint8_t brake_anim_flags = ANIM_PULSE;                    // animations that will be applied when the brakes are applied ::WEB_CONFIGURABLE::
 uint8_t turn_bpm = BPM;                                   // beats/minute for turn signals ::WEB_CONFIGURABLE::
 uint8_t turn_fade = 0;                                    // rate at which the turn signals fade to black: 8 bit, 1 = slow, 255 = fast, 0 = immediate ::WEB_CONFIGURABLE::
 uint8_t turn_left_color_index = 0;                        // palette color index for the left turn signal (rotates through palette)
@@ -102,6 +108,12 @@ Pulse turn_left = { TURN_CYLON, 0, 0, 0, 0 };             // left turn signal an
 Pulse turn_right = { TURN_CYLON, 0, 0, 0, 0 };            // right turn signal animation state tracking
 CRGB leds_plus_safety_pixel[NUM_LEDS + 1];
 CRGB* const leds(leds_plus_safety_pixel + 1);
+extern const TProgmemPalette16 BrakePalette_p FL_PROGMEM = { // brake static color palette which is stored in PROGMEM (flash), which is almost always more plentiful than RAM (64 bytes of flash) ::WEB_CONFIGURABLE::
+  0xFF0000, 0x000000, 0xFF0000, 0x000000,
+  0xFF0000, 0x000000, 0xFF0000, 0x000000,
+  0xFF0000, 0x000000, 0xFF0000, 0x000000,
+  0xFF0000, 0x000000, 0xFF0000, 0x000000
+};
 extern const TProgmemPalette16 RunPalette_p FL_PROGMEM = { // running lamp static color palette which is stored in PROGMEM (flash), which is almost always more plentiful than RAM (64 bytes of flash) ::WEB_CONFIGURABLE::
   0x000000, 0x800000, 0x000000, 0x800000,
   0x8B0000, 0x800000, 0x8B0000, 0x8B0000,
@@ -175,13 +187,14 @@ void setup() {
   Serial.begin(115200);
   statusIndicator(SETUP_STAT_INIT);
   //delay(1000); // ESP8266 init delay
+
+  // demo
+  //brakeOn();
+  //turnLeftOn();
+  //turnRightOn();
   
   ledSetup();
   netSetup();
-
-  // demo
-  //turnLeftOn();
-  //turnRightOn();
 
   statusIndicator(SETUP_STAT_COMPLETE);
 }
