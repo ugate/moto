@@ -128,6 +128,7 @@ IPAddress netSetup() {
   server.serveStatic("/favicon.ico", SPIFFS, "/favicon.png", "public, max-age=31536000");
   server.serveStatic("/favicon.png", SPIFFS, "/favicon.png", "public, max-age=31536000");
   server.serveStatic("/", SPIFFS, "/index.htm");
+  server.serveStatic("/home", SPIFFS, "/index.htm");
   /*server.on("/", HTTP_GET, []() {
     server.send(200, "text/html", html);
   });*/
