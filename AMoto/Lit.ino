@@ -318,31 +318,38 @@ void flagged(byte onFlag, byte offFlag, unsigned long* msp) {
     }
   }
 }
-void brakeOn() {
+bool brakeOn() {
   led_flags &= ~BRAKE_OFF; // remove
   led_flags |= BRAKE_ON; // add
   //Serial.printf("Brakes on... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
+  return led_flags & BRAKE_ON && !(led_flags & BRAKE_OFF);
 }
-void brakeOff() {
-  led_flags &= ~BRAKE_ON; // remove
+bool brakeOff() {
   led_flags |= BRAKE_OFF; // add
   //Serial.printf("Brakes off... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
+  return led_flags & BRAKE_OFF;
 }
-void turnLeftOn() {
+bool turnLeftOn() {
+  led_flags &= ~LEFT_ON; // remove
   led_flags |= LEFT_ON; // add
-  //Serial.printf("Left turn signal on... LEFT_ON: %d\n", led_flags & LEFT_ON);
+  //Serial.printf("Left turn signal on... LEFT_ON: %d, LEFT_OFF: %d\n", led_flags & LEFT_ON, led_flags & LEFT_OFF);
+  return led_flags & LEFT_ON && !(led_flags & LEFT_OFF);
 }
-void turnLeftOff() {
+bool turnLeftOff() {
   led_flags |= LEFT_OFF; // add
   //Serial.printf("Left turn signal off... LEFT_OFF: %d\n", led_flags & LEFT_OFF);
+  return led_flags & LEFT_OFF;
 }
-void turnRightOn() {
+bool turnRightOn() {
+  led_flags &= ~RIGHT_OFF; // remove
   led_flags |= RIGHT_ON; // add
-  //Serial.printf("Right turn signal on... RIGHT_ON: %d\n", led_flags & RIGHT_ON);
+  //Serial.printf("Right turn signal on... RIGHT_ON: %d, RIGHT_OFF: %d\n", led_flags & RIGHT_ON, led_flags & RIGHT_OFF);
+  return led_flags & RIGHT_ON && !(led_flags & RIGHT_OFF);
 }
-void turnRightOff() {
+bool turnRightOff() {
   led_flags |= RIGHT_OFF; // add
   //Serial.printf("Right turn signal off... RIGHT_OFF: %d\n", led_flags & RIGHT_OFF);
+  return led_flags & RIGHT_OFF;
 }
 
 // should be called in the main loop

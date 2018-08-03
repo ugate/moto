@@ -9,23 +9,30 @@
 // ----------------- ESP8266 Server -----------------------------
 
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h> 
+#include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
+#include <EEPROM.h>
 #include <FS.h>
 
-#define NET_NEEDS_SETUP 1 << 1
+#define NET_NEEDS_SETUP (1 << 1)
 #define DNS_PORT 53                                         // the port used for DNS (AP Mode only)
-#define SSID_FILE "/ssid.txt"                               // credential storage for SSID
-const char* domain = "motomoon.lighting";                   // when present, the webserver will be ran with SSID as an Access Point Webserver (AP Mode), otherwise SSID as the usernamen to connect to an existing AP (Station Mode)
-const char* ssidDefault = "Motomoon";                       // SSID to generated AP (AP Mode) or existing network SSID (Station Mode)
-const char* passwordDefault = "motomoon";                   // password to generated AP (AP Mode) or existing network password (Station Mode)
+#define SSID_FILE "/ssid.txt"                               //  wifi credential storage size in SPIFFS (option 2)
+#define WIFI_EEPROM_SIZE (1 + WL_SSID_MAX_LENGTH + 1 + WL_WPA_KEY_MAX_LENGTH) // max size for both SSID and password (including 1 extra byte for setup flag and another for the NULL terminator)
+#define NET_RESTART 0                                       // flag that indicates the net services should perform a hard reset of the CPU
+#define NET_SOFT_STOP 1                                     // flag that indicates the net services should perform a soft stop by closing net servers
+#define NET_SOFT_RESTART 2                                  // flag that indicates the net services should perform a soft restart by closing net servers, disconnecting from WiFi, reset the net parameters and restart
+const char* domain = "motomoon.lighting";                   // when present, the webserver will be ran with SSID as an Access Point Webserver (AP Mode), blank SSID as the username to connect to an existing AP (Station Mode)
+const char ssidDefault[WL_SSID_MAX_LENGTH] = "Motomoon";    // SSID to generated AP (AP Mode) or existing network SSID to connect to (Station Mode)
+const char passDefault[WL_WPA_KEY_MAX_LENGTH] = "motomoon"; // password to generated AP (AP Mode) or existing network password (Station Mode)
 volatile byte net_flags = 0;                                // flags for tracking web configuration state
-char* ssid;                                                 // the SSID/username
-char* password;                                             // the SSID password
 const IPAddress ip(192, 168, 1, 1);                         // IP address to use when in AP mode (blank domain) 
-DNSServer dnsServer;                                        // the DNS server instance (AP mode only)
-ESP8266WebServer server(80);                                // the web server instance with port
+DNSServer dns;                                              // the DNS server instance (AP mode only)
+ESP8266WebServer http(80);                                  // the web server instance with port
+struct wifi_t {
+  char ssid[WL_SSID_MAX_LENGTH];                            // the SSID/username
+  char pass[WL_WPA_KEY_MAX_LENGTH];                         // the SSID password
+} wifi;
 
 // ----------------- FASTLED ------------------------ 
 
@@ -37,7 +44,7 @@ ESP8266WebServer server(80);                                // the web server in
 #define PIN_BRAKE 0               // the pin the brake light is attached to
 #define PIN_TURN_LEFT 4           // the pin the left turn signal is attached to
 #define PIN_TURN_RIGHT 5          // the pin the right turn signal is attached to
-#define PIN_LEDS 2                // the pin that the LED strips are attached to
+#define PIN_LEDS 2                // the digital data pin that the LED strips are attached to
 #define COLOR_ORDER GRB           // LED color order of the strip
 #define CHIPSET WS2812B           // LED strip chipset
 #define BRIGHTNESS 192            // initial global brightness of LEDs
@@ -58,24 +65,25 @@ ESP8266WebServer server(80);                                // the web server in
 #define SETUP_STAT_LED_COMPLETE 2
 #define SETUP_STAT_NET_PENDING 3
 #define SETUP_STAT_COMPLETE 4
-#define ANIM_NOISE 1 << 1
-#define ANIM_FIRE 1 << 2
-#define ANIM_RAIN 1 << 3
-#define ANIM_JUGGLE 1 << 4
-#define ANIM_PULSE 1 << 5
-#define ANIM_CONFETTI 1 << 6
-#define ANIM_GLITTER 1 << 7
-#define TURN_RISING 1 << 0
-#define TURN_STAY_LIT_BACKWARDS 1 << 1
-#define TURN_CYLON 1 << 2
-#define RUN_ON 1 << 0
-#define RUN_OFF 1 << 1
-#define BRAKE_ON 1 << 2
-#define BRAKE_OFF 1 << 3
-#define LEFT_ON 1 << 4
-#define LEFT_OFF 1 << 5
-#define RIGHT_ON 1 << 6
-#define RIGHT_OFF 1 << 7
+#define SETUP_STAT_STOPPED 5
+#define ANIM_NOISE (1 << 0)
+#define ANIM_FIRE (1 << 1)
+#define ANIM_RAIN (1 << 2)
+#define ANIM_JUGGLE (1 << 3)
+#define ANIM_PULSE (1 << 4)
+#define ANIM_CONFETTI (1 << 5)
+#define ANIM_GLITTER (1 << 6)
+#define TURN_RISING (1 << 0)
+#define TURN_STAY_LIT_BACKWARDS (1 << 1)
+#define TURN_CYLON (1 << 2)
+#define RUN_ON (1 << 0)
+#define RUN_OFF (1 << 1)
+#define BRAKE_ON (1 << 2)
+#define BRAKE_OFF (1 << 3)
+#define LEFT_ON (1 << 4)
+#define LEFT_OFF (1 << 5)
+#define RIGHT_ON (1 << 6)
+#define RIGHT_OFF (1 << 7)
 #define RIGHT 0
 #define DOWN 1
 #define LEFT 2
@@ -134,23 +142,25 @@ void loop() {
   netLoop();
 }
 
-// LED fills for visual indication of server connection statuses
-void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, const char* ipLoc = "") {
+// LED fills for visual indication of connection statuses
+void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, const char* ipLoc = "", const char* info = "") {
   if (stat == SETUP_STAT_INIT) { // turn on on-board LED indicating startup is in progress
     pinMode(LED_BUILTIN, OUTPUT); // on-board LED
-    digitalWrite(LED_BUILTIN, LOW); Serial.println("---> STARTING <---");
+    digitalWrite(LED_BUILTIN, LOW); Serial.println("\n---> STARTING <---");
     return;
   } else if (stat == SETUP_STAT_COMPLETE) {
     FastLED.clear();
     FastLED.show();
     digitalWrite(LED_BUILTIN, HIGH); Serial.println("---> READY <---");
     return;
+  } else if (stat == SETUP_STAT_STOPPED) {
+    digitalWrite(LED_BUILTIN, LOW); Serial.println("\n---> STOPPED <---");
   }
   CRGB rgb = CRGB::Black;
   if (stat == SETUP_STAT_LED_COMPLETE) {
     rgb = CRGB::DarkSlateGray; Serial.println("LED setup complete");
   } else if (netStat == WL_CONNECTED && ipLoc != "") {
-    rgb = CRGB::Green; Serial.printf("Setup complete. Web access available at IP: %s\n", ipLoc);
+    rgb = CRGB::Green; Serial.printf("Net setup complete. Web access available at IP: %s\n%s\n", ipLoc, info);
   } else if (stat != SETUP_STAT_LED_COMPLETE) {
     switch (netStat) {
       case WL_IDLE_STATUS:
@@ -160,19 +170,19 @@ void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, c
         rgb = CRGB::Indigo; Serial.println("WiFi Scan completed...");
         break;
       case WL_NO_SSID_AVAIL:
-        rgb = CRGB::DarkOrange; Serial.printf("WiFi No SSID Available for: %s\n", ssid);
+        rgb = CRGB::DarkOrange; Serial.printf("WiFi No SSID Available for: %s\n", wifi.ssid);
         break;
       case WL_CONNECTED:
-        rgb = CRGB::GreenYellow; Serial.printf("WiFi Connected to: %s\n", ssid); WiFi.printDiag(Serial);
+        rgb = CRGB::GreenYellow; Serial.printf("WiFi Connected to: %s\n", wifi.ssid); WiFi.printDiag(Serial);
         break;
       case WL_CONNECT_FAILED:
-        rgb = CRGB::Red; Serial.printf("WiFi Connection Failed for SSID: %s\n", ssid);
+        rgb = CRGB::Red; Serial.printf("WiFi Connection Failed for SSID: %s\n", wifi.ssid);
         break;
       case WL_CONNECTION_LOST:
-        rgb = CRGB::Magenta; Serial.printf("WiFi Connection lost for SSID: %s\n", ssid);
+        rgb = CRGB::Magenta; Serial.printf("WiFi Connection lost for SSID: %s\n", wifi.ssid);
         break;
       case WL_DISCONNECTED:
-        rgb = CRGB::Yellow; Serial.printf("WiFi Disconnected from: %s\n", ssid);
+        rgb = CRGB::Yellow; Serial.printf("WiFi Disconnected from: %s\n", wifi.ssid);
         break;
     }
   }
@@ -186,11 +196,11 @@ void setup() {
   //system_update_cpu_freq(160); // 80 MHz or 160 MHz, default is 80 MHz
   Serial.begin(115200);
   statusIndicator(SETUP_STAT_INIT);
-  //delay(1000); // ESP8266 init delay
+  delay(1000); // ESP8266 init delay
 
   // demo
   //brakeOn();
-  //turnLeftOn();
+  turnLeftOn();
   //turnRightOn();
   
   ledSetup();
