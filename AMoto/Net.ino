@@ -54,51 +54,33 @@ void postSetup() { //Serial.println("POST SETUP JSON");
   } else http.send(200, "application/json", "{\"message\":\"POST SSID/Password are already set\"}");
 }
 
-template <class T> int write_anything_eeprom(int ee, const T& value, size_t rsize = 0) {
-  const byte* p = (const byte*)(const void*)&value;
-  unsigned int i;
-  rsize = rsize ? rsize : sizeof(value);
-  for (i = 0; i < rsize; i++) EEPROM.write(ee++, *p++);
-  return i;
-}
-
-template <class T> int read_anything_eeprom(int ee, T& value, size_t rsize = 0) {
-  byte* p = (byte*)(void*)&value;
-  unsigned int i;
-  rsize = rsize ? rsize : sizeof(value);
-  for (i = 0; i < rsize; i++) {
-    *p++ = EEPROM.read(ee++);
-    if (rsize && EEPROM.read(ee + 1) == '\0') return i;
-  }
-  return i;
+void clear_wifi_eeprom() {
+  for (int i = 0; i < sizeof(wifi); i++) EEPROM.write(i, 0); // clear
+  EEPROM.commit();
 }
 
 bool write_wifi_eeprom(String& ssidNew, String& passNew) {
-  const char* ws = ssidNew.c_str();
-  const char* wp = passNew.c_str(); //Serial.printf("Writting NEW WiFi SSID to EEPROM: \"%s\", PASS: \"%s\"\n", ws, wp);
   if (ssidNew.length() < 3 || passNew.length() < 8 || ssidNew.length() > WL_SSID_MAX_LENGTH || passNew.length() > WL_WPA_KEY_MAX_LENGTH) return false;
-  for (int i = 0; i < sizeof(wifi); i++) EEPROM.write(i, '\0'); // clear
-  byte hasSetup = 1; int pi = 0;
-  pi = write_anything_eeprom(0, hasSetup);
+  clear_wifi_eeprom(); Serial.printf("Writting NEW WiFi SSID to EEPROM: \"%s\", PASS: \"%s\"\n", ssidNew.c_str(), passNew.c_str());
+  byte hasSetup = 1;
   strcpy(wifi.ssid, ssidNew.c_str());
   strcpy(wifi.pass, passNew.c_str());
-  write_anything_eeprom(pi, wifi);
+  EEPROM.put(0, hasSetup);
+  EEPROM.put(1, wifi);
   EEPROM.commit();
-  read_wifi_eeprom();//Serial.printf("Wrote NEW WiFi SSID: \"%s\", PASS: \"%s\"\n", wifi.ssid, wifi.pass);
+  read_wifi_eeprom(); Serial.printf("Wrote NEW WiFi SSID: \"%s\", PASS: \"%s\"\n", wifi.ssid, wifi.pass);
   return true;
 }
 
 void read_wifi_eeprom() {
   byte hasSetup = 0;
-  int pi = read_anything_eeprom(0, hasSetup); //Serial.printf("Read WiFi setup flag \"%u\", next index: \"%d\"\n", hasSetup, pi);
+  EEPROM.get(0, hasSetup); Serial.printf("Read WiFi setup flag \"%u\"\n", hasSetup);
   if (hasSetup != 1) {
     net_flags |= NET_NEEDS_SETUP; // add
     strcpy(wifi.ssid, ssidDefault);
-    strcpy(wifi.pass, passDefault);
-    //Serial.printf("Using default SSID: \"%s\"\nUsing default password \"%s\"\n", wifi.ssid, wifi.pass);
+    strcpy(wifi.pass, passDefault); Serial.printf("Using default SSID: \"%s\"\nUsing default password \"%s\"\n", wifi.ssid, wifi.pass);
   } else {
-    read_anything_eeprom(pi, wifi);
-    //Serial.printf("Reading Saved SSID: \"%s\"\nReading Saved password \"%s\"\n", wifi.ssid, wifi.pass);
+    EEPROM.get(1, wifi); Serial.printf("Reading Saved SSID: \"%s\"\nReading Saved password \"%s\"\n", wifi.ssid, wifi.pass);
   }
   if (sizeof(wifi.ssid) == 0 || sizeof(wifi.pass) == 0) net_flags |= NET_NEEDS_SETUP; // add
 }
@@ -215,7 +197,10 @@ void netStop(const uint8_t type) {
     delay(1000);
     netSetup();
     delay(1000);
-  } else if (type == NET_RESTART) ESP.restart(); // reseting the CPU will loose current flags
+  } else if (type == NET_RESTART) {
+    delay(1000);
+    ESP.restart(); // reseting the CPU will loose current flags
+  }
 }
 
 // should be called in the main loop
@@ -228,7 +213,7 @@ void netLoop() {
 IPAddress netSetup() {
   SPIFFS.begin();
   //read_wifi_spiffs();
-  EEPROM.begin(sizeof(wifi));
+  EEPROM.begin(sizeof(wifi)); //clear_wifi_eeprom();
   read_wifi_eeprom();
   uint8_t wstat = WL_CONNECTED;
   IPAddress ipLoc;
