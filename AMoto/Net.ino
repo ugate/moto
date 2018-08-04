@@ -9,30 +9,31 @@ void handleNotFound() {
   http.send(404, "text/plain", msg);
 }
 
-void postLightFlags() { //Serial.println("POST LIGHTING FLAGS JSON");
-  String val; bool state;
-  if (http.hasArg("brakeOn")) {
-    val = http.arg("brakeOn");
-    state = val == "true" ? brakeOn() : brakeOff();
-    val = val == "true" ? "ON: " : "OFF: ";
-    http.send(200, "application/json", "{\"message\":\"Brake lights turned " + val + String(state) + "\"}");
-  } else if (http.hasArg("turnLeftOn")) {
-    val = http.arg("turnLeftOn");
-    state = val == "true" ? turnLeftOn() : turnLeftOff();
-    val = val == "true" ? "ON: " : "OFF: ";
-    http.send(200, "application/json", "{\"message\":\"Left turn signal turned " + val + String(state) + "\"}");
-  } else if (http.hasArg("turnRightOn")) {
-    val = http.arg("turnRightOn");
-    state = val == "true" ? turnRightOn() : turnRightOff();
-    val = val == "true" ? "ON: " : "OFF: ";
-    http.send(200, "application/json", "{\"message\":\"Right turn signal turned " + val + String(state) + "\"}");
-  } else http.send(400, "application/json", "{\"message\":\"Invalid payload for setting lighting flags\",\"isError\":true}");
+void postBrakeFlag() {
+  String val = http.hasArg("brakeOn") ? http.arg("brakeOn") : "false";
+  String rtn = val == "true" ? brakeOn() ? "true" : "false" : brakeOff(true) ? "true" : "false";
+  val = val == "true" ? "ON: " : "OFF: ";
+  http.send(200, "application/json", "{\"message\":\"Brake lights turned " + val + rtn + "\"}");
+}
+
+void postTurnLeftSignalFlag() {
+  String val = http.hasArg("turnLeftOn") ? http.arg("turnLeftOn") : "false";
+  String rtn = val == "true" ? turnLeftOn() ? "true" : "false" : turnLeftOff(true) ? "true" : "false";
+  val = val == "true" ? "ON: " : "OFF: ";
+  http.send(200, "application/json", "{\"message\":\"Left turn signal turned " + val + rtn + "\"}");
+}
+
+void postTurnRightSignalFlag() {
+  String val = http.hasArg("turnRightOn") ? http.arg("turnRightOn") : "false";
+  String rtn = val == "true" ? turnRightOn() ? "true" : "false" : turnRightOff(true) ? "true" : "false";
+  val = val == "true" ? "ON: " : "OFF: ";
+  http.send(200, "application/json", "{\"message\":\"Right turn signal turned " + val + rtn + "\"}");
 }
 
 void getSetup() { //Serial.println("GET SETUP/ANIM JSON");
   if (net_flags & NET_NEEDS_SETUP) {
-    http.send(200, "application/json", "{\"setup\":{\"ssid\":{\"value\":\"" + String(wifi.ssid) + "\",\"maxlength\":" + WL_SSID_MAX_LENGTH + "},\"password\":{\"value\":\"\",\"maxlength\":" + WL_WPA_KEY_MAX_LENGTH + "}}}");
-  } else http.send(200, "application/json", "{\"anim\":" + getAnimJson() + "}");
+    http.send(200, "application/json", getSetupJson());
+  } else http.send(200, "application/json", getAnimJson());
 }
 
 void postSetup() { //Serial.println("POST SETUP JSON");
@@ -55,32 +56,33 @@ void postSetup() { //Serial.println("POST SETUP JSON");
 }
 
 void clear_wifi_eeprom() {
-  for (int i = 0; i < sizeof(wifi); i++) EEPROM.write(i, 0); // clear
+  for (int i = 0; i < sizeof(wifi) + 1; i++) EEPROM.write(i, 0); // clear
   EEPROM.commit();
 }
 
 bool write_wifi_eeprom(String& ssidNew, String& passNew) {
   if (ssidNew.length() < 3 || passNew.length() < 8 || ssidNew.length() > WL_SSID_MAX_LENGTH || passNew.length() > WL_WPA_KEY_MAX_LENGTH) return false;
-  clear_wifi_eeprom(); Serial.printf("Writting NEW WiFi SSID to EEPROM: \"%s\", PASS: \"%s\"\n", ssidNew.c_str(), passNew.c_str());
+  clear_wifi_eeprom(); //Serial.printf("Writting NEW WiFi SSID to EEPROM: \"%s\", PASS: \"%s\"\n", ssidNew.c_str(), passNew.c_str());
   byte hasSetup = 1;
   strcpy(wifi.ssid, ssidNew.c_str());
   strcpy(wifi.pass, passNew.c_str());
   EEPROM.put(0, hasSetup);
   EEPROM.put(1, wifi);
   EEPROM.commit();
-  read_wifi_eeprom(); Serial.printf("Wrote NEW WiFi SSID: \"%s\", PASS: \"%s\"\n", wifi.ssid, wifi.pass);
+  read_wifi_eeprom(); //Serial.printf("Wrote NEW WiFi SSID: \"%s\", PASS: \"%s\"\n", wifi.ssid, wifi.pass);
   return true;
 }
 
 void read_wifi_eeprom() {
   byte hasSetup = 0;
-  EEPROM.get(0, hasSetup); Serial.printf("Read WiFi setup flag \"%u\"\n", hasSetup);
+  EEPROM.get(0, hasSetup); //Serial.printf("Read WiFi setup flag \"%u\"\n", hasSetup);
   if (hasSetup != 1) {
     net_flags |= NET_NEEDS_SETUP; // add
     strcpy(wifi.ssid, ssidDefault);
-    strcpy(wifi.pass, passDefault); Serial.printf("Using default SSID: \"%s\"\nUsing default password \"%s\"\n", wifi.ssid, wifi.pass);
+    strcpy(wifi.pass, passDefault); //Serial.printf("Using default SSID: \"%s\"\nUsing default password \"%s\"\n", wifi.ssid, wifi.pass);
   } else {
-    EEPROM.get(1, wifi); Serial.printf("Reading Saved SSID: \"%s\"\nReading Saved password \"%s\"\n", wifi.ssid, wifi.pass);
+    net_flags &= ~NET_NEEDS_SETUP; // remove
+    EEPROM.get(1, wifi); //Serial.printf("Reading Saved SSID: \"%s\"\nReading Saved password \"%s\"\n", wifi.ssid, wifi.pass);
   }
   if (sizeof(wifi.ssid) == 0 || sizeof(wifi.pass) == 0) net_flags |= NET_NEEDS_SETUP; // add
 }
@@ -139,7 +141,7 @@ String get_file_names_spiffs() {
   return str;
 }
 
-void getManifest() { //Serial.println("Sending manifest for Web App Install Banner");
+void sendManifest() { //Serial.println("Sending manifest for Web App Install Banner");
   http.send(200, "application/json",
   "{"
   "  \"short_name\": \"Moto Moon\","
@@ -168,20 +170,45 @@ void getManifest() { //Serial.println("Sending manifest for Web App Install Bann
   "}");
 }
 
-String getAnimJson() {
-  return String(
-  "{"
-  " \"ssid\": {"
-  "   \"value\": \"" + String(wifi.ssid) + "\","
-  "   \"maxlength\": " + WL_SSID_MAX_LENGTH + ""
-  " },"
-  " \"animations\": ["
-  "   {"
-  "     \"label\": \"Noise\","
-  "     \"value\": " + ANIM_NOISE + ""
+String getSetupJson() {
+  return "{"
+  " \"setup\":{"
+  "   \"ssid\":{"
+  "     \"value\":\"" + String(wifi.ssid) + "\","
+  "     \"maxlength\":" + WL_SSID_MAX_LENGTH + ""
+  "   },"
+  "   \"password\":{"
+  "     \"value\":\"\","
+  "     \"maxlength\":" + WL_WPA_KEY_MAX_LENGTH + ""
   "   }"
-  " ]"
-  "}");
+  " }"
+  "}";
+}
+
+String getAnimJson() {
+  String bon = isBrakeOn() ? "true" : "false", lon = isTurnLeftOn() ? "true" : "false", ron = isTurnRightOn() ? "true" : "false";
+  return "{"
+  " \"anim\":""{"
+  "   \"_conf\":{" // configuration directives for client
+  "     \"menuUnlock\":true" // unlock all the menu items on the client
+  "   },"
+  "   \"brakeOn\": {"
+  "     \"checked\":" + bon + ""
+  "   },"
+  "   \"turnLeftOn\": {"
+  "     \"checked\":" + lon + ""
+  "   },"
+  "   \"turnRightOn\": {"
+  "     \"checked\":" + ron + ""
+  "   },"
+  "   \"animations\": ["
+  "     {"
+  "       \"label\": \"Noise\","
+  "       \"value\": " + ANIM_NOISE + ""
+  "     }"
+  "   ]"
+  " }"
+  "}";
 }
 
 // stops/restarts net services
@@ -243,15 +270,15 @@ IPAddress netSetup() {
   http.serveStatic("/favicon.png", SPIFFS, "/favicon.png", "public, max-age=31536000");
   http.serveStatic("/", SPIFFS, "/index.htm");
   http.serveStatic("/home", SPIFFS, "/index.htm");
-  http.on("/manifest.json", HTTP_GET, getManifest);
+  http.on("/manifest.json", HTTP_GET, sendManifest);
   /*http.on("/", HTTP_GET, []() {
     http.send(200, "text/html", html);
   });*/
   http.on("/setup", HTTP_GET, getSetup);
   http.on("/setup", HTTP_POST, postSetup);
-  http.on("/apply/brake", HTTP_POST, postLightFlags);
-  http.on("/apply/turn/left", HTTP_POST, postLightFlags);
-  http.on("/apply/turn/right", HTTP_POST, postLightFlags);
+  http.on("/apply/brake", HTTP_POST, postBrakeFlag);
+  http.on("/apply/turn/left", HTTP_POST, postTurnLeftSignalFlag);
+  http.on("/apply/turn/right", HTTP_POST, postTurnRightSignalFlag);
   http.begin();
   statusIndicator(SETUP_STAT_NONE, wstat, ipLoc.toString().c_str(), get_file_names_spiffs().c_str());
   return ip;

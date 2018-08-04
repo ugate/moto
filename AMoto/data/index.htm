@@ -58,7 +58,7 @@
     @media (max-width: 839px) and (min-width: 480px) {.margin {width:calc(25% - 16px);display:none !important;margin:8px;box-sizing:border-box;}}
     @media (min-width: 840px) {.margin {width:calc(16.6666666667% - 16px);margin:8px;box-sizing:border-box;}}
     .content {min-height:calc(100vh - 15vh);margin-bottom:80px;border-radius:2px;box-sizing:border-box;}
-    .menu {position:relative;min-height:3em;width:100%;background:#03A9F4;}
+    .menu {position:relative;width:100%;text-align:center;padding:1.5em 0 .75em 0;background:#03A9F4;}
     @media (min-width: 840px) {.content {width:calc(66.6666666667% - 16px);margin:8px;}}
     @media (max-width: 839px) and (min-width: 480px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1.5em !important;}}
     @media (max-width: 479px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1em !important;}}
@@ -83,6 +83,8 @@
     .md-grp select:invalid ~ .bar::before, .md-grp input:invalid ~ .bar::before, .md-grp textarea:invalid ~ .bar::before {width:100%;left:0;background:#E91E63;}
     .md-grp select:focus, .md-grp input:focus, .md-grp textarea:focus {outline:none;} .md-grp select:focus ~ label, .md-grp input:focus ~ label, .md-grp textarea:focus ~ label {color:#03A9F4;}
     .md-grp select:focus ~ .bar::before, .md-grp input:focus ~ .bar::before, .md-grp textarea:focus ~ .bar::before {width:100%;left:0;}
+    .md-grp input[type=checkbox] + label {width: 100%;}
+    .btn-icon {font-size:2em;color:white;line-height:1.25em;vertical-align:bottom;border:3px solid transparent;} .btn-icon.active {border: 3px solid #00E5FF;}
     button {border:none;cursor:pointer;color:white;padding:15px 40px;border-radius:2px;box-shadow:2px 2px 4px rgba(0, 0, 0, .4);background:#03A9F4;position:relative;overflow:hidden;}
     button:after {content:'';position:absolute;top:50%;left:50%;width:5px;height:5px;background:rgba(255, 255, 255, .5);opacity:0;border-radius:100%;transform:scale(1, 1) translate(-50%);transform-origin:50% 50%;}
     button:focus:not(:active)::after {animation:ripple 500ms ease-out;} @keyframes ripple { 0% {transform:scale(0, 0);opacity:1;} 20% {transform:scale(25, 25);opacity:1;} 100% {opacity:0;transform:scale(40, 40);}}
@@ -98,7 +100,10 @@
         <a href="/">Moto Moon</a>
       </label>
       <div class="content shadow white grey-text">
-        <div class="menu"></div>
+        <div class="menu" id="menu">
+          <b class="btn-icon" title="WiFi Credentials" data-view="setup" onclick="mm.viewSelection(event)">&#128272;</b>
+          <b class="btn-icon hide" title="Lighting Options" data-view="anim" onclick="mm.viewSelection(event)">&#128161;</b>
+        </div>
         <data id="viewer"></div>
         <div class="overlay" id="loader">
           <div class="center loader">
@@ -112,8 +117,7 @@
   </main>
   <div class="hide view" id="setup">
     <div class="instruct">
-      <b class="hide" title="Lighting Options" data-view-lock data-view="anim" onclick="mm.viewSelection(event)">&#128262;</b>
-      Enter a name and password for WiFi access
+      WiFi Setup
     </div>
     <div class="container">
       <div class="md-grp">
@@ -129,27 +133,29 @@
     </div>
   </div>
   <div class="hide view" id="reconnect">
-    <div class="instruct">WiFi credentials saved</div>
+    <div class="instruct">
+      &#9995; WiFi Credentials Saved!
+    </div>
     <div class="container">
       <h3>Reconnect to WiFi and refresh the page to continue</h3>
     </div>
   </div>
-  <div class="hide view" data-view-unlock id="anim">
-    <div class="instruct">
-      <b title="WiFi Credentials" data-view="setup" onclick="mm.viewSelection(event)">&#128246;</b>
-      Lighting Options
-    </div>
+  <div class="hide view" id="anim">
     <div class="container">
       <div class="md-grp">
-        <input type="checkbox" id="brakeOn" onchange="mm.formRequest(event)"
+        <input type="checkbox" id="brakeOn" onclick="mm.formRequest(event)" value="true"
           data-req-sel="#brakeOn" data-req-method="POST" data-req-action="/apply/brake" />
-        <label for="brakeOn">Brake lights &#128283;</label>
-        <input type="checkbox" id="turnLeftOn" onchange="mm.formRequest(event)"
+        <label for="brakeOn">Toggle Brake lights</label>
+      </div>
+      <div class="md-grp">
+        <input type="checkbox" id="turnLeftOn" onclick="mm.formRequest(event)" value="true"
           data-req-sel="#turnLeftOn" data-req-method="POST" data-req-action="/apply/turn/left" />
-        <label for="turnLeftOn">Left Turn Signal &#128283;</label>
-        <input type="checkbox" id="turnRightOn" onchange="mm.formRequest(event)"
+        <label for="turnLeftOn">Toggle Left Turn Signal</label>
+      </div>
+      <div class="md-grp">
+        <input type="checkbox" id="turnRightOn" onclick="mm.formRequest(event)" value="true"
           data-req-sel="#turnRightOn" data-req-method="POST" data-req-action="/apply/turn/right" />
-        <label for="turnRightOn">Left Turn Signal &#128283;</label>
+        <label for="turnRightOn">Toggle Right Turn Signal</label>
       </div>
       <div class="md-grp">
         <select id="lightType" class="browser-default" onchange="mm.viewSelection(event)">
@@ -190,6 +196,7 @@
       mmi.views = {};
       mmi.viewer = mmi.viewer || document.getElementById('viewer');
       mmi.loader = mmi.loader || document.getElementById('loader');
+      mmi.menus = mmi.menus || document.querySelectorAll('#menu .btn-icon');
       for (var i = 0, vws = document.querySelectorAll('.view'); vws && vws[i]; ++i) {
         if (!vws[i].id) continue;
         vws[i].className = 'view';
@@ -212,13 +219,11 @@
         if (isInit && !(isInit = false)) mmi.viewer.innerHTML = '';
         mmi.viewer.appendChild(mmi.views[nm]);
         mmi.fillify(mmi.views[nm], json[nm]);
-        if (mmi.views[nm].hasAttribute('data-view-unlock')) {
-          var els = document.querySelectorAll('[data-view-lock]');
-          for (var li = 0; li < (els && els.length) || 0; ++li) {
-            mmi.clazzList(els[li]).remove('hide');
-            els[li].removeAttribute('data-view-lock');
-          }
-          mmi.views[nm].removeAttribute('data-view-unlock');
+        var unlock = json[nm]._conf && json[nm]._conf.menuUnlock;
+        for (var li = 0; li < mmi.menus.length; ++li) {
+          if (nm === mmi.menus[li].dataset.view) mmi.clazzList(mmi.menus[li]).add('active');
+          else mmi.clazzList(mmi.menus[li]).remove('active');
+          if (unlock) mmi.clazzList(mmi.menus[li]).remove('hide');
         }
       }
       if (!opts.noLoading) mmi.loadbar(true);
@@ -231,6 +236,7 @@
           for (var dn in dta) {
             switch (dn) {
               case 'value': case 'innerHTML': case 'innerText': case 'textContent': els[i][dn] = dta[dn]; break;
+              case 'checked': els[i].checked = dta[dn] == 'true' || dta[dn] == 1; break;
               default: els[i].setAttribute(dn, dta[dn]);
             }
           }
@@ -250,7 +256,7 @@
       var mmi = this, trg = event.currentTarget, els = document.querySelectorAll(trg.dataset.reqSel), pyld = {}, valid = true;
       for (var i = 0; i < els.length; ++i) {
         if (els[i].reportValidity && !els[i].reportValidity()) valid = false;
-        pyld[els[i].id || els[i].name] = els[i].value;
+        if ((els[i].type !== 'checkbox' && els[i].type !== 'radio') || els[i].checked) pyld[els[i].id || els[i].name] = els[i].value;
         if (els[i].type && els[i].type.toLowerCase() == 'password') els[i].value = '';
       }
       if (!valid) return;

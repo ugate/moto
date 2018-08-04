@@ -311,7 +311,7 @@ void noise8(const CRGBPalette16& palette, const bool left, const bool right, con
 }
 // debounce flag check for off condition (prevents in sudden fluctuations when turning flags off)
 void flagged(byte onFlag, byte offFlag, unsigned long* msp) {
-  if (led_flags & offFlag) { // off flagged
+  if (led_flags & onFlag && led_flags & offFlag) { // on and off flagged
     if (millis() - *msp > DETECT_MILLIS) {//Serial.printf("%s off. Elapsed Time: %d\n", offFlag == LEFT_OFF ? "Left turn signal" : RIGHT_OFF ? "Right turn signal" : "Brake lights", millis() - *msp);
       *msp = millis();
       led_flags &= ~onFlag; // remove on flag
@@ -322,41 +322,62 @@ bool brakeOn() {
   led_flags &= ~BRAKE_OFF; // remove
   led_flags |= BRAKE_ON; // add
   //Serial.printf("Brakes on... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
-  return led_flags & BRAKE_ON && !(led_flags & BRAKE_OFF);
+  return isBrakeOn();
 }
-bool brakeOff() {
+bool brakeOff(bool now = false) {
+  if (now) led_flags &= ~BRAKE_ON; // remove
   led_flags |= BRAKE_OFF; // add
   //Serial.printf("Brakes off... BRAKE_ON: %d, BRAKE_OFF: %d\n", led_flags & BRAKE_ON, led_flags & BRAKE_OFF);
-  return led_flags & BRAKE_OFF;
+  return isBrakeOff();
 }
 bool turnLeftOn() {
-  led_flags &= ~LEFT_ON; // remove
+  led_flags &= ~LEFT_OFF; // remove
   led_flags |= LEFT_ON; // add
   //Serial.printf("Left turn signal on... LEFT_ON: %d, LEFT_OFF: %d\n", led_flags & LEFT_ON, led_flags & LEFT_OFF);
-  return led_flags & LEFT_ON && !(led_flags & LEFT_OFF);
+  return isTurnLeftOn();
 }
-bool turnLeftOff() {
+bool turnLeftOff(bool now = false) {
+  if (now) led_flags &= ~LEFT_ON; // remove
   led_flags |= LEFT_OFF; // add
-  //Serial.printf("Left turn signal off... LEFT_OFF: %d\n", led_flags & LEFT_OFF);
-  return led_flags & LEFT_OFF;
+  //Serial.printf("Left turn signal off... LEFT_ON: %d, LEFT_OFF: %d\n", led_flags & LEFT_ON, led_flags & LEFT_OFF);
+  return isTurnLeftOff();
 }
 bool turnRightOn() {
   led_flags &= ~RIGHT_OFF; // remove
   led_flags |= RIGHT_ON; // add
   //Serial.printf("Right turn signal on... RIGHT_ON: %d, RIGHT_OFF: %d\n", led_flags & RIGHT_ON, led_flags & RIGHT_OFF);
+  return isTurnRightOn();
+}
+bool turnRightOff(bool now = false) {
+  if (now) led_flags &= ~RIGHT_ON; // remove
+  led_flags |= RIGHT_OFF; // add
+  //Serial.printf("Right turn signal off... RIGHT_ON: %d, RIGHT_OFF: %d\n", led_flags & RIGHT_ON, led_flags & RIGHT_OFF);
+  return isTurnRightOff();
+}
+bool isBrakeOn() {
+  return led_flags & BRAKE_ON && !(led_flags & BRAKE_OFF);
+}
+bool isBrakeOff() {
+  return led_flags & BRAKE_OFF && !(led_flags & BRAKE_ON);
+}
+bool isTurnLeftOn() {
+  return led_flags & LEFT_ON && !(led_flags & LEFT_OFF);
+}
+bool isTurnLeftOff() {
+  return led_flags & LEFT_OFF && !(led_flags & LEFT_ON);
+}
+bool isTurnRightOn() {
   return led_flags & RIGHT_ON && !(led_flags & RIGHT_OFF);
 }
-bool turnRightOff() {
-  led_flags |= RIGHT_OFF; // add
-  //Serial.printf("Right turn signal off... RIGHT_OFF: %d\n", led_flags & RIGHT_OFF);
-  return led_flags & RIGHT_OFF;
+bool isTurnRightOff() {
+  return led_flags & RIGHT_OFF && !(led_flags & RIGHT_ON);
 }
 
 // should be called in the main loop
 void ledLoop() {
   flagged(BRAKE_ON, BRAKE_OFF, &brakeOffMillisPrev); // check if brake is on usng time threshold
   flagged(LEFT_ON, LEFT_OFF, &leftOffMillisPrev); // check if left turn signal is on usng time threshold
-  flagged(RIGHT_ON, LEFT_OFF, &rightOffMillisPrev); // check if right turn signal is on usng time threshold
+  flagged(RIGHT_ON, RIGHT_OFF, &rightOffMillisPrev); // check if right turn signal is on usng time threshold
   EVERY_N_MILLISECONDS(FPS_ANIM_MILLIS) {
     //memcpy8(buffer, leds, sizeof(leds)); // copy values from buffer to LEDs
     //memset8(leds, 0, NUM_LEDS * sizeof(CRGB)); // clear the LED pixel buffer

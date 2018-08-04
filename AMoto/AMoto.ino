@@ -17,8 +17,7 @@
 
 #define NET_NEEDS_SETUP (1 << 1)
 #define DNS_PORT 53                                         // the port used for DNS (AP Mode only)
-#define SSID_FILE "/ssid.txt"                               //  wifi credential storage size in SPIFFS (option 2)
-#define WIFI_EEPROM_SIZE (1 + WL_SSID_MAX_LENGTH + 1 + WL_WPA_KEY_MAX_LENGTH) // max size for both SSID and password (including 1 extra byte for setup flag and another for the NULL terminator)
+#define SSID_FILE "/ssid.txt"                               //  wifi credential storage size in SPIFFS
 #define NET_RESTART 0                                       // flag that indicates the net services should perform a hard reset of the CPU
 #define NET_SOFT_STOP 1                                     // flag that indicates the net services should perform a soft stop by closing net servers
 #define NET_SOFT_RESTART 2                                  // flag that indicates the net services should perform a soft restart by closing net servers, disconnecting from WiFi, reset the net parameters and restart
@@ -200,11 +199,12 @@ void setup() {
 
   // demo
   //brakeOn();
-  turnLeftOn();
+  //turnLeftOn();
   //turnRightOn();
   
   ledSetup();
   netSetup();
 
+  delay(1000); // give some time for the net to settle
   statusIndicator(SETUP_STAT_COMPLETE);
 }
