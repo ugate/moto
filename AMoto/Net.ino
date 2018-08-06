@@ -1,6 +1,6 @@
 // ----------------- ESP8266 Server -----------------------------
 
-void handleNotFound() {
+void httpNotFound() {
   String msg = "File Not Found\n\n";
   msg += "URI: " + http.uri() + "\nMethod: " + (http.method() == HTTP_GET) ? "GET" : "POST";
   msg += "\nArguments: " + http.args();
@@ -9,34 +9,50 @@ void handleNotFound() {
   http.send(404, "text/plain", msg);
 }
 
-void postBrakeFlag() {
+void httpPostBrakeFlag() {
   String val = http.hasArg("brakeOn") ? http.arg("brakeOn") : "false";
   String rtn = val == "true" ? brakeOn() ? "true" : "false" : brakeOff(true) ? "true" : "false";
   val = val == "true" ? "ON: " : "OFF: ";
   http.send(200, "application/json", "{\"message\":\"Brake lights turned " + val + rtn + "\"}");
 }
 
-void postTurnLeftSignalFlag() {
+void httpPostLeftFlag() {
   String val = http.hasArg("turnLeftOn") ? http.arg("turnLeftOn") : "false";
   String rtn = val == "true" ? turnLeftOn() ? "true" : "false" : turnLeftOff(true) ? "true" : "false";
   val = val == "true" ? "ON: " : "OFF: ";
   http.send(200, "application/json", "{\"message\":\"Left turn signal turned " + val + rtn + "\"}");
 }
 
-void postTurnRightSignalFlag() {
+void httpPostRightFlag() {
   String val = http.hasArg("turnRightOn") ? http.arg("turnRightOn") : "false";
   String rtn = val == "true" ? turnRightOn() ? "true" : "false" : turnRightOff(true) ? "true" : "false";
   val = val == "true" ? "ON: " : "OFF: ";
   http.send(200, "application/json", "{\"message\":\"Right turn signal turned " + val + rtn + "\"}");
 }
 
-void getSetup() { //Serial.println("GET SETUP/ANIM JSON");
+void httpGetSetup() { //Serial.println("GET SETUP/RUN LIGHTS JSON");
   if (net_flags & NET_NEEDS_SETUP) {
     http.send(200, "application/json", getSetupJson());
-  } else http.send(200, "application/json", getAnimJson());
+  } else httpGetRunLights();
 }
 
-void postSetup() { //Serial.println("POST SETUP JSON");
+void httpGetToggle() {
+  http.send(200, "application/json", getToggleJson());
+}
+
+void httpGetRunLights() { //Serial.println("GET SETUP/RUN LIGHTS JSON");
+  http.send(200, "application/json", getRunJson());
+}
+
+void httpGetBrakeLights() { //Serial.println("GET BRAKE LIGHTS JSON");
+  http.send(200, "application/json", getBrakeJson());
+}
+
+void httpGetTurnLights() { //Serial.println("GET TURN SIGNAL JSON");
+  http.send(200, "application/json", getTurnJson());
+}
+
+void httpPostSetup() { //Serial.println("POST SETUP JSON");
   if (net_flags & NET_NEEDS_SETUP) {
     if (!http.hasArg("ssid") || !http.hasArg("password")) {
       http.send(400, "application/json", "{\"message\":\"Missing POST SSID and/or Password\",\"isError\":true}"); return;
@@ -56,7 +72,7 @@ void postSetup() { //Serial.println("POST SETUP JSON");
 }
 
 void clear_wifi_eeprom() {
-  for (int i = 0; i < sizeof(wifi) + 1; i++) EEPROM.write(i, 0); // clear
+  for (uint16_t i = 0; i < sizeof(wifi) + 1; i++) EEPROM.write(i, 0); // clear
   EEPROM.commit();
 }
 
@@ -141,7 +157,7 @@ String get_file_names_spiffs() {
   return str;
 }
 
-void sendManifest() { //Serial.println("Sending manifest for Web App Install Banner");
+void httpGetManifest() { //Serial.println("Sending manifest for Web App Install Banner");
   http.send(200, "application/json",
   "{"
   "  \"short_name\": \"Moto Moon\","
@@ -175,20 +191,60 @@ String getSetupJson() {
   " \"setup\":{"
   "   \"ssid\":{"
   "     \"value\":\"" + String(wifi.ssid) + "\","
-  "     \"maxlength\":" + WL_SSID_MAX_LENGTH + ""
+  "     \"maxlength\":" + String(WL_SSID_MAX_LENGTH) + ""
   "   },"
   "   \"password\":{"
   "     \"value\":\"\","
-  "     \"maxlength\":" + WL_WPA_KEY_MAX_LENGTH + ""
+  "     \"maxlength\":" + String(WL_WPA_KEY_MAX_LENGTH) + ""
   "   }"
   " }"
   "}";
 }
 
-String getAnimJson() {
+String getRunJson() {
+  return "{"
+  " \"run\":{"
+  "   \"_conf\":{" // configuration directives for client
+  "     \"menuUnlock\":true" // unlock all the menu items on the client
+  "   }," + getAnimationsJson() + ""
+  " }"
+  "}";
+}
+
+String getBrakeJson() {
+  return "{"
+  " \"brake\":{"
+  "   \"_conf\":{" // configuration directives for client
+  "     \"menuUnlock\":true" // unlock all the menu items on the client
+  "   }," + getAnimationsJson() + ""
+  " }"
+  "}";
+}
+
+String getTurnJson() {
+  return "{"
+  " \"turn\":{"
+  "   \"_conf\":{" // configuration directives for client
+  "     \"menuUnlock\":true" // unlock all the menu items on the client
+  "   }," + getAnimationsJson() + ""
+  " }"
+  "}";
+}
+
+String getAnimationsJson() {
+  return "\"animations\":"
+  "["
+  " {"
+  "   \"label\":\"Noise\","
+  "   \"value\":" + String(ANIM_NOISE) + ""
+  " }"
+  "]";
+}
+
+String getToggleJson() {
   String bon = isBrakeOn() ? "true" : "false", lon = isTurnLeftOn() ? "true" : "false", ron = isTurnRightOn() ? "true" : "false";
   return "{"
-  " \"anim\":""{"
+  " \"toggle\":""{"
   "   \"_conf\":{" // configuration directives for client
   "     \"menuUnlock\":true" // unlock all the menu items on the client
   "   },"
@@ -200,13 +256,7 @@ String getAnimJson() {
   "   },"
   "   \"turnRightOn\": {"
   "     \"checked\":" + ron + ""
-  "   },"
-  "   \"animations\": ["
-  "     {"
-  "       \"label\": \"Noise\","
-  "       \"value\": " + ANIM_NOISE + ""
-  "     }"
-  "   ]"
+  "   }"
   " }"
   "}";
 }
@@ -216,7 +266,7 @@ void netStop(const uint8_t type) {
   if (type == NET_RESTART || type == NET_SOFT_RESTART || type == NET_SOFT_STOP) {
     dns.stop();
     http.close();
-    if (domain != "") WiFi.disconnect(true);
+    if (strlen(domain)) WiFi.disconnect(true);
     else WiFi.softAPdisconnect(true);
     statusIndicator(SETUP_STAT_STOPPED, WL_DISCONNECTED); 
   }
@@ -232,7 +282,7 @@ void netStop(const uint8_t type) {
 
 // should be called in the main loop
 void netLoop() {
-  if (domain != "") dns.processNextRequest();
+  if (strlen(domain)) dns.processNextRequest();
   http.handleClient();
 }
 
@@ -244,7 +294,7 @@ IPAddress netSetup() {
   read_wifi_eeprom();
   uint8_t wstat = WL_CONNECTED;
   IPAddress ipLoc;
-  if (domain != "") {
+  if (strlen(domain)) {
     WiFi.mode(WIFI_AP); // need both to serve the webpage and take commands via TCP
     WiFi.softAPConfig(ip, ip, IPAddress(255, 255, 255, 0));
     WiFi.softAP(wifi.ssid, wifi.pass); // password can be removed if the AP should be open
@@ -265,20 +315,24 @@ IPAddress netSetup() {
     } while (WiFi.status() != WL_CONNECTED);
     ipLoc = WiFi.localIP();
   }
-  http.onNotFound(handleNotFound);
+  http.onNotFound(httpNotFound);
   http.serveStatic("/favicon.ico", SPIFFS, "/favicon.png", "public, max-age=31536000");
   http.serveStatic("/favicon.png", SPIFFS, "/favicon.png", "public, max-age=31536000");
   http.serveStatic("/", SPIFFS, "/index.htm");
   http.serveStatic("/home", SPIFFS, "/index.htm");
-  http.on("/manifest.json", HTTP_GET, sendManifest);
+  http.on("/manifest.json", HTTP_GET, httpGetManifest);
   /*http.on("/", HTTP_GET, []() {
     http.send(200, "text/html", html);
   });*/
-  http.on("/setup", HTTP_GET, getSetup);
-  http.on("/setup", HTTP_POST, postSetup);
-  http.on("/apply/brake", HTTP_POST, postBrakeFlag);
-  http.on("/apply/turn/left", HTTP_POST, postTurnLeftSignalFlag);
-  http.on("/apply/turn/right", HTTP_POST, postTurnRightSignalFlag);
+  http.on("/setup", HTTP_GET, httpGetSetup);
+  http.on("/setup", HTTP_POST, httpPostSetup);
+  http.on("/toggle", HTTP_GET, httpGetToggle);
+  http.on("/toggle/apply/brake", HTTP_POST, httpPostBrakeFlag);
+  http.on("/toggle/apply/turn/left", HTTP_POST, httpPostLeftFlag);
+  http.on("/toggle/apply/turn/right", HTTP_POST, httpPostRightFlag);
+  http.on("/run", HTTP_GET, httpGetRunLights);
+  http.on("/brake", HTTP_GET, httpGetBrakeLights);
+  http.on("/turn", HTTP_GET, httpGetTurnLights);
   http.begin();
   statusIndicator(SETUP_STAT_NONE, wstat, ipLoc.toString().c_str(), get_file_names_spiffs().c_str());
   return ip;

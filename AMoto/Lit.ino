@@ -166,7 +166,6 @@ void fire(const CRGBPalette16& palette, const bool left, const bool right, uint8
   CRGB stack[width][ROWS]; // stacks that are cooler
   uint16_t hotMax = hot * ROWS;
   uint16_t hot2x = hot * 2;
-  uint16_t hotHalf = hot >> 1;
   for (int x = xstart; x < width; x++) {
     if (spark[x] < hot) spark[x] = random16(hot2x, hotMax); // re-heat spark
     spark[x] = qsub8(spark[x], random8(0, cooling)); // cool the spark
@@ -265,7 +264,7 @@ void pulse(const CRGBPalette16& palette, const bool left, const bool right, cons
   CRGB rgb = palette[scale8(data8_x, 15)];
   fill_display(rgb, left, right, fade);
   if (traceColor.getLuma() > 0) {
-    const uint8_t width = left && right ? COLS : left ? NUM_LEFT_COLS : NUM_RIGHT_COLS;
+    //const uint8_t width = left && right ? COLS : left ? NUM_LEFT_COLS : NUM_RIGHT_COLS;
     const uint16_t xmin = left ? 0 : NUM_LEFT_COLS + NUM_CENTER_COLS, xmax = right ? COLS - 1 : NUM_LEFT_COLS - 1;
     if (data16_x < xmin) data16_x = xmin;
     if (data16_y < 0) data16_y = 0;

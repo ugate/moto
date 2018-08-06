@@ -87,7 +87,7 @@ struct wifi_t {
 #define DOWN 1
 #define LEFT 2
 #define UP 3
-volatile byte led_flags = 0;                              // flags for tracking LED states (separate ON/OFF flags for each state should exist to account for spurts of false-positive irregularities)
+byte led_flags = 0;                                       // flags for tracking LED states (separate ON/OFF flags for each state should exist to account for spurts of false-positive irregularities)
 unsigned long brakeOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay braking input
 unsigned long leftOffMillisPrev = 0;                      // used to avoid false-positives from possible fluctuations from external 12v relay left turn signal input
 unsigned long rightOffMillisPrev = 0;                     // used to avoid false-positives from possible fluctuations from external 12v relay right turn signal input
@@ -158,7 +158,7 @@ void statusIndicator(const uint8_t stat, const uint8_t netStat = WL_CONNECTED, c
   CRGB rgb = CRGB::Black;
   if (stat == SETUP_STAT_LED_COMPLETE) {
     rgb = CRGB::DarkSlateGray; Serial.println("LED setup complete");
-  } else if (netStat == WL_CONNECTED && ipLoc != "") {
+  } else if (netStat == WL_CONNECTED && strlen(ipLoc)) {
     rgb = CRGB::Green; Serial.printf("Net setup complete. Web access available at IP: %s\n%s\n", ipLoc, info);
   } else if (stat != SETUP_STAT_LED_COMPLETE) {
     switch (netStat) {

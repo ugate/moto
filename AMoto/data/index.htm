@@ -21,7 +21,7 @@
     body {margin:0;width:100%;min-height:100%;background-color:#f5f5f5 !important;}
     ::selection {background:#b3d4fc;text-shadow:none;} .hide {display:none;}
     .logo {width:7rem;height:7rem;position:absolute;top:-3em;left:calc((100vw / 2) - 3.5em);z-index:1;}
-    label.logo {top:-2em;text-align:center;width:25em;word-spacing:7em;transform:translateX(-35%);}
+    label.logo {top:-2em;text-align:center;width:25em;height:3em;word-spacing:7em;transform:translateX(-35%);}
     label.logo a {text-decoration:none;transform:perspective(2.5em) rotateX(15deg) scaleY(0.8);transition:all 0.5s;
     display:inline-block;text-align:center;font-size:4em;font-weight:700;line-height:0.5;color:#08e3ff;
     text-shadow:0 -1px 15px rgba(0, 0, 0, 0.9), 0 1px 0 #005d64, 0 3px 0 #006269, 0 5px 0 #00676e, 0 7px 0 #006c73, 0 9px 0 #007178, 0 6px 50px rgba(59, 233, 255, 0.8);}
@@ -39,9 +39,9 @@
     @keyframes rotate { 100% {transform:rotate(360deg);}}@keyframes dash { 0% {stroke-dasharray:1, 200;stroke-dashoffset:0;} 50% {stroke-dasharray:89, 200;stroke-dashoffset:-35px;}
     100% {stroke-dasharray:89, 200;stroke-dashoffset:-124px;}}
     @keyframes color { 100%, 0% {stroke:#FF1744;} 40% {stroke:#D500F9;} 66% {stroke:#76FF03;} 80%, 90% {stroke:#FFA700;}}
+    .no-select {-webkit-touch-callout:none;-webkit-user-select:none;-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
     #snackbar { border: none;position: fixed;right: 0;left: 50%;z-index: 2000;bottom: -112px;min-width: 50vw;min-height: 48px;max-height: 112px;max-width: 1235px;overflow: hidden;
-    padding: 14px 24px;margin: 0;border-radius: 2px;font-size: 1rem;color: white;background-color: #006064;background-clip: padding-box;box-sizing: border-box;
-    -webkit-touch-callout: none;-webkit-user-select: none;-khtml-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;transition: all 200ms ease-out;
+    padding: 14px 24px;margin: 0;border-radius: 2px;font-size: 1rem;color: white;background-color: #006064;background-clip: padding-box;box-sizing: border-box;transition: all 200ms ease-out;
     transform: translateX(-50%); cursor: pointer;} #snackbar.active {bottom: 0;} #snackbar.snackbar-error {background-color: #B71C1C;} #snackbar .snackbar-message {overflow: auto;}
     #snackbar.snackbar-header {overflow: visible;} #snackbar.snackbar-header .snackbar-head {position: absolute;top: -1.45em;left: 0;opacity: 0;font-size: 1.5em;
     background: rgba(66,66,66,1); border: none;text-align: center;padding: 0 .5em;width: 100%;transition: opacity 300ms;} #snackbar.snackbar-header.active .snackbar-head {opacity: 1;}
@@ -49,6 +49,12 @@
     text-decoration: none;text-transform: uppercase;} .snackbar-msg {display: none;}
     .unload-bar {position: absolute;background-color: black;width: 100%;height: 3px;top: 0;left: 0;animation: unloadbar 2s linear 1 forwards;}
     #snackbar:hover .unload-bar {animation: none;} @keyframes unloadbar { 0% {width: 100%;} 100% {width: 0px;}}
+    .switch {position:relative;display:inline-block;width:60px;height:34px;} .switch input {display:none;}
+    .slider {position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#B71C1C;-webkit-transition:.2s;transition:.2s;}
+    .slider:before {position:absolute;content:"";height:26px;width:26px;left:4px;bottom:4px;background-color:white;-webkit-transition:.2s;transition:.2s;}
+    input:checked + .slider {background-color:#00C853;} input:focus + .slider {box-shadow:0 0 1px #00C853;}
+    input:checked + .slider:before {-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px);}
+    .slider.round {border-radius:34px;} .slider.round:before {border-radius:50%;}
     main {position:relative;top:3em;flex-shrink:0;flex-grow:1;-webkit-overflow-scrolling:touch;}
     main > div {max-width:1600px;width:calc(100% - 16px);margin:0px auto;display:flex;flex-flow:row wrap;align-items:stretch;}
     @media (max-width: 479px) {main > div {padding:8px;}}
@@ -58,7 +64,9 @@
     @media (max-width: 839px) and (min-width: 480px) {.margin {width:calc(25% - 16px);display:none !important;margin:8px;box-sizing:border-box;}}
     @media (min-width: 840px) {.margin {width:calc(16.6666666667% - 16px);margin:8px;box-sizing:border-box;}}
     .content {min-height:calc(100vh - 15vh);margin-bottom:80px;border-radius:2px;box-sizing:border-box;}
-    .menu {position:relative;width:100%;text-align:center;padding:1.5em 0 .75em 0;background:#03A9F4;}
+    .menu {position:relative;width:100%;text-align:center;padding:1.5em 0 1.2em 0;background:#03A9F4;}
+    .btn-icon {font-size:1.3em;padding:1em .2em .3em .3em;color:white;fill:white;line-height:1.25em;vertical-align:bottom;border:4px solid transparent;border-radius:50%;}
+    .btn-icon.active {border:4px solid #00E5FF;}
     @media (min-width: 840px) {.content {width:calc(66.6666666667% - 16px);margin:8px;}}
     @media (max-width: 839px) and (min-width: 480px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1.5em !important;}}
     @media (max-width: 479px) {.content {width:calc(100% - 16px);margin:8px;} .instruct {font-size:1em !important;}}
@@ -68,11 +76,12 @@
     button, input {overflow:visible;} button, input, optgroup, select, textarea {font-family:sans-serif;font-size:100%;line-height:1.15;margin:0;}
     .center {display:flex;flex-flow:row nowrap;align-items:center;justify-content:center;} .container {padding:1rem 2rem;font-size:1.5em;text-align:center;}
     input, select, textarea, body *,input::after,input::before,select::after,select::before,textarea::after,textarea::before {box-sizing:border-box;}
+    .vcol {margin:1em 0 2em 0;} .vcol > * {padding:0 0 1em 0;}
     .form-radio, .md-grp {position:relative;margin-top:2.25em;margin-bottom:2.25em;} .md-grp input {height:1.9rem;} .md-grp textarea {resize:none;}
     .md-grp .bar {position:relative;border-bottom:0.0625em solid #999;display:block;}
     .md-grp .bar::before {content:'';height:0.125em;width:0;left:50%;bottom:-0.0625em;position:absolute;background:#03A9F4;transition:left 0.28s ease, width 0.28s ease;}
     .md-grp select {width:100%;font-size:1em;height:1.6em;padding:0.125em 0.125em 0.0625em;background:none;border:none;line-height:1.6;box-shadow:none;}
-    .md-grp label {position:absolute;top:0.25em;left:0;pointer-events:none;padding-left:0.125em;z-index:1;color:#b3b3b3;font-size:1em;font-weight:normal;transition:all 180ms cubic-bezier(0.4, 0, 0.2, 1);}
+    .md-grp label:not(.switch) {position:absolute;top:0.25em;left:0;width:100%;pointer-events:none;padding-left:0.125em;z-index:1;color:#b3b3b3;font-size:1em;font-weight:normal;transition:all 180ms cubic-bezier(0.4, 0, 0.2, 1);}
     .md-grp input, .md-grp textarea {display:block;background:none;padding:0.125em 0.125em 0.0625em;font-size:1em;border-width:0;border-color:transparent;line-height:1.9;
     width:100%;transition:all 0.28s ease;box-shadow:none;margin-bottom:.5em;} .md-grp input:invalid:not(:focus), .md-grp textarea:invalid:not(:focus) {color:transparent;}
     .md-grp select, .md-grp input:focus, .md-grp input:valid, .md-grp input.has-value, .md-grp textarea:focus, .md-grp textarea:valid, .md-grp textarea.has-value {color:#333;}
@@ -83,8 +92,6 @@
     .md-grp select:invalid ~ .bar::before, .md-grp input:invalid ~ .bar::before, .md-grp textarea:invalid ~ .bar::before {width:100%;left:0;background:#E91E63;}
     .md-grp select:focus, .md-grp input:focus, .md-grp textarea:focus {outline:none;} .md-grp select:focus ~ label, .md-grp input:focus ~ label, .md-grp textarea:focus ~ label {color:#03A9F4;}
     .md-grp select:focus ~ .bar::before, .md-grp input:focus ~ .bar::before, .md-grp textarea:focus ~ .bar::before {width:100%;left:0;}
-    .md-grp input[type=checkbox] + label {width: 100%;}
-    .btn-icon {font-size:2em;color:white;line-height:1.25em;vertical-align:bottom;border:3px solid transparent;} .btn-icon.active {border: 3px solid #00E5FF;}
     button {border:none;cursor:pointer;color:white;padding:15px 40px;border-radius:2px;box-shadow:2px 2px 4px rgba(0, 0, 0, .4);background:#03A9F4;position:relative;overflow:hidden;}
     button:after {content:'';position:absolute;top:50%;left:50%;width:5px;height:5px;background:rgba(255, 255, 255, .5);opacity:0;border-radius:100%;transform:scale(1, 1) translate(-50%);transform-origin:50% 50%;}
     button:focus:not(:active)::after {animation:ripple 500ms ease-out;} @keyframes ripple { 0% {transform:scale(0, 0);opacity:1;} 20% {transform:scale(25, 25);opacity:1;} 100% {opacity:0;transform:scale(40, 40);}}
@@ -101,8 +108,63 @@
       </label>
       <div class="content shadow white grey-text">
         <div class="menu" id="menu">
-          <b class="btn-icon" title="WiFi Credentials" data-view="setup" onclick="mm.viewSelection(event)">&#128272;</b>
-          <b class="btn-icon hide" title="Lighting Options" data-view="anim" onclick="mm.viewSelection(event)">&#128161;</b>
+          <b class="btn-icon" title="WiFi Credentials" data-view="setup" onclick="mm.formRequest(event)"
+            data-req-action="/setup">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 600 445">
+              <g transform="translate(0,445) scale(0.1,-0.1)">
+              <path d="M1008 4431 c-77 -31 -113 -58 -199 -149 -419 -448 -681 -983 -780 -1597 -27 -167 -37 -565 -20 -752 62 -657 352 -1297 803 -1769 117 -122 180 -156 299 -162 107 -5 174 13 251 67 135 98 190 286 129 444 -22 57 -44 85 -197 257 -150 169 -312 442 -398 673 -149 397 -179 880 -80 1296 89 378 275 723 552 1023 93 101 125 154 143 240 35 161 -58 346 -209 416 -77 35 -223 42 -294 13z"/>
+              <path d="M4729 4432 c-175 -71 -274 -246 -240 -423 18 -91 48 -142 141 -244 170 -185 274 -333 375 -535 163 -325 235 -637 235 -1008 -1 -352 -68 -652 -214 -957 -106 -220 -223 -392 -394 -577 -49 -53 -99 -117 -111 -143 -91 -194 -14 -418 175 -511 54 -26 68 -29 164 -29 99 0 109 2 172 33 51 25 87 54 154 125 453 481 724 1067 800 1727 23 206 16 599 -15 795 -90 563 -324 1072 -692 1500 -110 128 -194 206 -255 235 -68 33 -227 39 -295 12z"/>
+              <path d="M1965 3607 c-73 -24 -109 -49 -194 -131 -247 -240 -415 -549 -493 -906 -20 -93 -22 -133 -22 -345 0 -212 2 -252 22 -345 79 -362 245 -666 500 -913 112 -108 165 -132 297 -132 88 0 107 3 157 27 197 92 276 313 184 513 -15 33 -55 86 -107 140 -140 145 -211 262 -265 440 -26 84 -28 102 -28 270 0 168 2 186 28 270 30 98 86 217 137 292 18 26 73 89 121 140 98 103 131 160 148 252 21 118 -12 230 -97 321 -77 84 -141 113 -258 117 -56 2 -105 -2 -130 -10z"/>
+              <path d="M3809 3606 c-74 -29 -116 -56 -162 -105 -109 -116 -133 -283 -61 -428 14 -30 60 -89 105 -136 136 -140 211 -266 266 -446 25 -80 27 -99 27 -266 0 -168 -2 -186 -28 -270 -30 -98 -86 -217 -137 -292 -18 -26 -73 -89 -121 -140 -98 -103 -131 -160 -148 -252 -29 -162 56 -330 207 -406 53 -28 67 -30 163 -30 99 0 110 2 171 32 105 52 282 244 401 435 105 169 184 369 230 578 20 93 22 133 22 345 0 212 -2 252 -22 344 -80 366 -244 666 -500 914 -106 103 -165 130 -287 134 -59 2 -102 -2 -126 -11z"/>
+              <path d="M2858 2661 c-164 -53 -284 -195 -311 -370 -35 -229 120 -459 344 -510 162 -38 339 16 447 134 224 247 117 648 -199 746 -79 25 -203 24 -281 0z"/>
+              </g>
+            </svg>
+          </b>
+          <b class="btn-icon" title="Test Lights" data-view="toggle" onclick="mm.formRequest(event)"
+            data-req-action="/toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 600 391">
+              <g transform="translate(0,391) scale(0.1,-0.1)">
+              <path d="M1484 3589 c-732 -65 -1340 -627 -1464 -1353 -28 -162 -28 -400 0 -562 106 -618 579 -1141 1176 -1300 226 -60 133 -57 1699 -61 1499 -5 1630 -2 1813 37 564 119 1028 536 1213 1090 108 323 108 707 0 1030 -211 630 -758 1061 -1422 1120 -137 12 -2878 11 -3015 -1z m3058 -564 c640 -111 1042 -751 862 -1371 -107 -370 -404 -654 -789 -755 -78 -21 -112 -24 -255 -23 -145 1 -177 4 -262 27 -383 102 -682 401 -785 782 -24 90 -27 117 -27 270 0 153 3 180 27 270 35 130 119 299 201 401 245 310 646 466 1028 399z"/>
+              </g>
+            </svg>
+          </b>
+          <b class="btn-icon" title="Running Lights Animation" data-view="run" onclick="mm.formRequest(event)"
+            data-req-action="/run">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 600 390">
+              <g transform="translate(0,390) scale(0.1,-0.1)">
+              <path d="M216 3881 c-46 -31 -66 -69 -66 -131 0 -35 6 -65 16 -80 24 -36 442 -457 488 -491 32 -24 49 -29 95 -29 63 0 101 19 132 66 24 37 26 129 3 164 -24 36 -442 457 -488 491 -32 24 -49 29 -95 29 -38 0 -65 -6 -85 -19z"></path>
+              <path d="M5604 3871 c-46 -34 -464 -455 -488 -491 -23 -35 -21 -127 3 -164 31 -47 69 -66 132 -66 46 0 63 5 95 29 46 34 464 455 488 491 23 35 21 127 -3 164 -31 47 -69 66 -132 66 -46 0 -63 -5 -95 -29z"></path>
+              <path d="M1362 3269 c-69 -34 -104 -71 -138 -144 l-24 -50 0 -1125 0 -1125 24 -50 c34 -73 69 -110 138 -144 57 -29 69 -31 167 -31 634 0 1203 488 1306 1120 19 122 19 338 0 460 -103 632 -672 1120 -1306 1120 -98 0 -110 -2 -167 -31z m401 -309 c96 -25 239 -90 328 -150 82 -56 213 -187 269 -269 59 -88 124 -230 152 -331 20 -74 23 -108 23 -260 0 -204 -16 -281 -89 -436 -59 -125 -115 -205 -210 -300 -177 -177 -404 -283 -646 -302 l-90 -8 0 1046 0 1046 90 -8 c50 -4 127 -16 173 -28z"></path>
+              <path d="M4261 3284 c-548 -92 -1006 -554 -1096 -1104 -19 -122 -19 -338 0 -460 103 -632 672 -1120 1306 -1120 98 0 110 2 167 31 69 34 104 71 138 144 l24 50 0 1126 0 1126 -31 61 c-34 69 -71 104 -144 138 -44 21 -64 24 -165 23 -63 -1 -153 -7 -199 -15z m239 -1332 l0 -1048 -90 8 c-171 13 -352 78 -501 178 -82 56 -213 187 -269 269 -59 88 -124 230 -152 331 -20 74 -23 108 -23 260 0 203 16 280 89 436 60 125 115 205 210 300 176 175 402 282 644 304 48 4 88 8 90 9 1 0 2 -471 2 -1047z"></path>
+              <path d="M66 2081 c-46 -31 -66 -69 -66 -131 0 -62 20 -100 66 -131 27 -18 53 -19 384 -19 331 0 357 1 384 19 46 31 66 69 66 131 0 62 -20 100 -66 131 -27 18 -53 19 -384 19 -331 0 -357 -1 -384 -19z"></path>
+              <path d="M5166 2081 c-46 -31 -66 -69 -66 -131 0 -62 20 -100 66 -131 27 -18 53 -19 384 -19 331 0 357 1 384 19 46 31 66 69 66 131 0 62 -20 100 -66 131 -27 18 -53 19 -384 19 -331 0 -357 -1 -384 -19z"></path>
+              <path d="M654 721 c-46 -34 -464 -455 -488 -491 -23 -35 -21 -127 3 -164 31 -47 69 -66 132 -66 46 0 63 5 95 29 46 34 464 455 488 491 23 35 21 127 -3 164 -31 47 -69 66 -132 66 -46 0 -63 -5 -95 -29z"></path>
+              <path d="M5166 731 c-46 -31 -66 -69 -66 -131 0 -35 6 -65 16 -80 24 -36 442 -457 488 -491 32 -24 49 -29 95 -29 63 0 101 19 132 66 24 37 26 129 3 164 -24 36 -442 457 -488 491 -32 24 -49 29 -95 29 -38 0 -65 -6 -85 -19z"></path>
+              </g>
+            </svg>
+          </b>
+          <b class="btn-icon" title="Brake Light Animation" data-view="brake" onclick="mm.formRequest(event)"
+            data-req-action="/brake">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 600 390">
+              <g transform="translate(0,390) scale(0.1,-0.1)">
+              <path d="M216 3881 c-46 -31 -66 -69 -66 -131 0 -35 6 -65 16 -80 24 -36 442 -457 488 -491 32 -24 49 -29 95 -29 63 0 101 19 132 66 24 37 26 129 3 164 -24 36 -442 457 -488 491 -32 24 -49 29 -95 29 -38 0 -65 -6 -85 -19z"></path>
+              <path d="M5604 3871 c-46 -34 -464 -455 -488 -491 -23 -35 -21 -127 3 -164 31 -47 69 -66 132 -66 46 0 63 5 95 29 46 34 464 455 488 491 23 35 21 127 -3 164 -31 47 -69 66 -132 66 -46 0 -63 -5 -95 -29z"></path>
+              <path d="M1362 3269 c-69 -34 -104 -71 -138 -144 l-24 -50 0 -1125 0 -1125 24 -50 c34 -73 69 -110 138 -144 57 -29 69 -31 167 -31 634 0 1203 488 1306 1120 19 122 19 338 0 460 -103 632 -672 1120 -1306 1120 -98 0 -110 -2 -167 -31z"></path>
+              <path d="M4261 3284 c-548 -92 -1006 -554 -1096 -1104 -19 -122 -19 -338 0 -460 103 -632 672 -1120 1306 -1120 98 0 110 2 167 31 69 34 104 71 138 144 l24 50 0 1126 0 1126 -31 61 c-34 69 -71 104 -144 138 -44 21 -64 24 -165 23 -63 -1 -153 -7 -199 -15z"></path>
+              <path d="M66 2081 c-46 -31 -66 -69 -66 -131 0 -62 20 -100 66 -131 27 -18 53 -19 384 -19 331 0 357 1 384 19 46 31 66 69 66 131 0 62 -20 100 -66 131 -27 18 -53 19 -384 19 -331 0 -357 -1 -384 -19z"></path>
+              <path d="M5166 2081 c-46 -31 -66 -69 -66 -131 0 -62 20 -100 66 -131 27 -18 53 -19 384 -19 331 0 357 1 384 19 46 31 66 69 66 131 0 62 -20 100 -66 131 -27 18 -53 19 -384 19 -331 0 -357 -1 -384 -19z"></path>
+              <path d="M654 721 c-46 -34 -464 -455 -488 -491 -23 -35 -21 -127 3 -164 31 -47 69 -66 132 -66 46 0 63 5 95 29 46 34 464 455 488 491 23 35 21 127 -3 164 -31 47 -69 66 -132 66 -46 0 -63 -5 -95 -29z"></path>
+              <path d="M5166 731 c-46 -31 -66 -69 -66 -131 0 -35 6 -65 16 -80 24 -36 442 -457 488 -491 32 -24 49 -29 95 -29 63 0 101 19 132 66 24 37 26 129 3 164 -24 36 -442 457 -488 491 -32 24 -49 29 -95 29 -38 0 -65 -6 -85 -19z"></path>
+              </g>
+            </svg>
+          </b>
+          <b class="btn-icon" title="Turn Signal Animation" data-view="turn" onclick="mm.formRequest(event)"
+            data-req-action="/turn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="24" viewBox="0 0 40 26">
+              <polygon transform="translate(-15,-22)" id="polygon5" points="24.64,26.46 15,35.33 24.64,43.81 24.64,39.76 32.35,39.76 32.35,30.7 32.35,30.7 24.64,30.7 "/>
+              <polygon transform="translate(-15,-22)" id="polygon7" points="45.36,30.24 37.65,30.24 37.65,39.3 45.36,39.3 45.36,43.54 55,34.67 55,34.67 45.36,26.19 "/>
+            </svg>
+          </b>
         </div>
         <data id="viewer"></div>
         <div class="overlay" id="loader">
@@ -140,44 +202,95 @@
       <h3>Reconnect to WiFi and refresh the page to continue</h3>
     </div>
   </div>
-  <div class="hide view" id="anim">
+  <div class="hide view" id="toggle">
     <div class="container">
-      <div class="md-grp">
-        <input type="checkbox" id="brakeOn" onclick="mm.formRequest(event)" value="true"
-          data-req-sel="#brakeOn" data-req-method="POST" data-req-action="/apply/brake" />
-        <label for="brakeOn">Toggle Brake lights</label>
+      <div class="vcol">
+        <div>Toggle Brake lights</div>
+        <label class="switch">
+          <input type="checkbox" id="brakeOn" onclick="mm.formRequest(event)" value="true"
+            data-req-sel="#brakeOn" data-req-method="POST" data-req-action="/toggle/apply/brake">
+          <span class="slider round"></span>
+        </label>
       </div>
-      <div class="md-grp">
-        <input type="checkbox" id="turnLeftOn" onclick="mm.formRequest(event)" value="true"
-          data-req-sel="#turnLeftOn" data-req-method="POST" data-req-action="/apply/turn/left" />
-        <label for="turnLeftOn">Toggle Left Turn Signal</label>
+      <div class="vcol">
+        <div>Toggle Left Turn Signal</div>
+        <label class="switch">
+          <input type="checkbox" id="turnLeftOn" onclick="mm.formRequest(event)" value="true"
+            data-req-sel="#turnLeftOn" data-req-method="POST" data-req-action="/toggle/apply/turn/left">
+          <span class="slider round"></span>
+        </label>
       </div>
-      <div class="md-grp">
-        <input type="checkbox" id="turnRightOn" onclick="mm.formRequest(event)" value="true"
-          data-req-sel="#turnRightOn" data-req-method="POST" data-req-action="/apply/turn/right" />
-        <label for="turnRightOn">Toggle Right Turn Signal</label>
-      </div>
-      <div class="md-grp">
-        <select id="lightType" class="browser-default" onchange="mm.viewSelection(event)">
-          <option value="" disabled selected hidden>Select a lighting type</option>
-          <option value="run">Running Lamps</option>
-          <option value="brake">Brake Lights</option>
-          <option value="turn">Turn Signals</option>
-        </select>
-      </div>
-    </div>
-    <div id="run">
-      <div class="container">
-        <div class="md-grp">
-          <input type="range" data-ticks-sel="#frameticks" required="required" min="1" max="30" value="1" name="frame" id="frame">
-          <label for="frame">Amination Frame</label><i class="bar"></i>
-          <datalist id="frameticks"></datalist>
-        </div>
-        <button type="submit">Save</button>
+      <div class="vcol">
+        <div>Toggle Right Turn Signal</div>
+        <label class="switch">
+          <input type="checkbox" id="turnRightOn" onclick="mm.formRequest(event)" value="true"
+            data-req-sel="#turnRightOn" data-req-method="POST" data-req-action="/toggle/apply/turn/right">
+          <span class="slider round"></span>
+        </label>
       </div>
     </div>
   </div>
-  <div id="snackbar">
+  <div class="hide view" id="run">
+    <div class="container">
+      <div class="md-grp">
+        <select id="lightType" class="browser-default" onchange="mm.viewSelection(event)">
+          <option value="" disabled selected hidden>Select a running light animation</option>
+          <option value="one">One</option>
+          <option value="two">Two</option>
+          <option value="three">Three</option>
+        </select>
+      </div>
+    </div>
+    <div class="container">
+      <div class="md-grp">
+        <input type="range" data-ticks-sel="#frameticks" required="required" min="1" max="30" value="1" name="frame" id="frame">
+        <label for="frame">Amination Frame</label><i class="bar"></i>
+        <datalist id="frameticks"></datalist>
+      </div>
+      <button type="submit">Save</button>
+    </div>
+  </div>
+  <div class="hide view" id="brake">
+    <div class="container">
+      <div class="md-grp">
+        <select id="lightType" class="browser-default" onchange="mm.viewSelection(event)">
+          <option value="" disabled selected hidden>Select a brake animation</option>
+          <option value="one">One</option>
+          <option value="two">Two</option>
+          <option value="three">Three</option>
+        </select>
+      </div>
+    </div>
+    <div class="container">
+      <div class="md-grp">
+        <input type="range" data-ticks-sel="#frameticks" required="required" min="1" max="30" value="1" name="frame" id="frame">
+        <label for="frame">Amination Frame</label><i class="bar"></i>
+        <datalist id="frameticks"></datalist>
+      </div>
+      <button type="submit">Save</button>
+    </div>
+  </div>
+  <div class="hide view" id="turn">
+    <div class="container">
+      <div class="md-grp">
+        <select id="lightType" class="browser-default" onchange="mm.viewSelection(event)">
+          <option value="" disabled selected hidden>Select a turn signal animation</option>
+          <option value="one">One</option>
+          <option value="two">Two</option>
+          <option value="three">Three</option>
+        </select>
+      </div>
+    </div>
+    <div class="container">
+      <div class="md-grp">
+        <input type="range" data-ticks-sel="#frameticks" required="required" min="1" max="30" value="1" name="frame" id="frame">
+        <label for="frame">Amination Frame</label><i class="bar"></i>
+        <datalist id="frameticks"></datalist>
+      </div>
+      <button type="submit">Save</button>
+    </div>
+  </div>
+  <div id="snackbar" class="no-select">
     <div class="unload-bar"></div>
     <span>TEMPLATE</span>
     <a href="#">DONE</a>
