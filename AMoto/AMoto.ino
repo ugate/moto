@@ -3,6 +3,7 @@
  WS2812B 144 LEDS/Meter IP65/IP67/IP68 (1 meter strip)
  LM2596 Mini 360 DC/DC Buck/Step-down converter (12v -> 5v x 5pcs, 1x running light/power, 1x brake, 1x left turn, 1x right turn)
  DFMO00743 - Motorcycle Tail Light LED Integrated Brake Smoke Turn Signal License Plate (1pc)
+ SN74HCT245 DIP20 IC octal bus transceiver (1pc)
  ESP8266 - ESP8266 NodeMCU WiFi Module (1pc)
  */
 
